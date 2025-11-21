@@ -217,9 +217,13 @@ async function loadRecentBlocks() {
 // ==================== WALLET PAGE ====================
 
 async function loadWalletPage() {
+    // Mostrar HD Wallet por defecto (recomendado)
+    showWalletType('hd');
+    
+    // Intentar cargar wallet standard si existe
     try {
         const balance = await api.getWalletBalance();
-        
+
         if (balance.success) {
             const info = document.getElementById('walletInfo');
             info.innerHTML = `
@@ -232,7 +236,7 @@ async function loadWalletPage() {
                     </div>
                     <div>
                         <strong>Dirección:</strong><br>
-                        <span style="font-family: monospace; font-size: 0.85rem; word-break: break-all; cursor: pointer;" 
+                        <span style="font-family: monospace; font-size: 0.85rem; word-break: break-all; cursor: pointer;"
                               onclick="copyToClipboard('${balance.data.address}')"
                               title="Click para copiar">
                             ${balance.data.address}
@@ -240,14 +244,18 @@ async function loadWalletPage() {
                     </div>
                 </div>
             `;
-            
+
             currentWallet = balance.data;
-            
+
             // Load transaction history
             loadTransactionHistory();
+            
+            // Si hay wallet standard cargada, mostrar esa sección
+            showWalletType('standard');
         }
     } catch {
-        document.getElementById('walletInfo').innerHTML = 
+        // No hay wallet standard, dejar HD por defecto
+        document.getElementById('walletInfo').innerHTML =
             '<p class="no-data">No hay wallet cargada</p>';
         currentWallet = null;
     }
@@ -304,6 +312,330 @@ async function loadTransactionHistory() {
     } catch (error) {
         console.error('Error loading history:', error);
         container.innerHTML = '<p class="no-data">Error cargando historial</p>';
+    }
+}
+
+// ==================== HD WALLET FUNCTIONS ====================
+
+let currentHDWallet = null;
+
+function showWalletType(type) {
+    const standardSection = document.getElementById('standardWalletSection');
+    const hdSection = document.getElementById('hdWalletSection');
+    const btnStandard = document.getElementById('btnStandardWallet');
+    const btnHD = document.getElementById('btnHDWallet');
+    
+    if (type === 'standard') {
+        standardSection.style.display = 'block';
+        hdSection.style.display = 'none';
+        btnStandard.classList.add('btn-primary');
+        btnStandard.classList.remove('btn-secondary');
+        btnHD.classList.remove('btn-primary');
+        btnHD.classList.add('btn-secondary');
+    } else {
+        standardSection.style.display = 'none';
+        hdSection.style.display = 'block';
+        btnHD.classList.add('btn-primary');
+        btnHD.classList.remove('btn-secondary');
+        btnStandard.classList.remove('btn-primary');
+        btnStandard.classList.add('btn-secondary');
+    }
+}
+async function createHDWallet() {
+    const name = prompt('HD Wallet name:', 'MyHDWallet');
+    if (!name) return;
+    
+    try {
+        const response = await api.request('/hdwallet/create', {
+            method: 'POST',
+            body: JSON.stringify({ name })
+        });
+        
+        if (response.success) {
+            const data = response.data;
+            
+            // Mostrar mnemonic
+            alert(`✅ HD Wallet Created!
+
+🔑 MNEMONIC (SAVE THIS!):
+${data.mnemonic}
+
+⚠️ Write these 12 words down and keep them safe!
+Anyone with these words can access ALL your funds.
+
+First address: ${data.first_address.substring(0, 20)}...`);
+            
+            currentHDWallet = name;
+            showToast('HD Wallet created!', 'success');
+            
+            // AGREGAR ESTA LÍNEA - Cargar info automáticamente
+            await loadHDWalletInfo(name);
+        }
+    } catch (error) {
+        showToast('Error creating HD wallet: ' + error.message, 'error');
+    }
+}
+
+function showRestoreHDWallet() {
+    const form = document.getElementById('restoreHDForm');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+async function restoreHDWallet() {
+    const mnemonic = document.getElementById('mnemonicInput').value.trim();
+    const name = document.getElementById('restoreNameInput').value.trim() || 'RestoredHDWallet';
+    
+    if (!mnemonic) {
+        showToast('Enter mnemonic phrase', 'warning');
+        return;
+    }
+    
+    const words = mnemonic.split(/\s+/);
+    if (words.length !== 12) {
+        showToast('Mnemonic must be exactly 12 words', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await api.request('/hdwallet/restore', {
+            method: 'POST',
+            body: JSON.stringify({ mnemonic, name })
+        });
+        
+        if (response.success) {
+            showToast('HD Wallet restored!', 'success');
+            currentHDWallet = name;
+            document.getElementById('restoreHDForm').style.display = 'none';
+            document.getElementById('mnemonicInput').value = '';
+            document.getElementById('restoreNameInput').value = '';
+            loadHDWalletInfo(name);
+        }
+    } catch (error) {
+        showToast('Error restoring wallet: ' + error.message, 'error');
+    }
+}
+
+async function loadExistingHDWallet() {
+    const name = prompt('HD Wallet filename (without .json):', 'MyHDWallet');
+    if (!name) return;
+    
+    try {
+        const response = await api.request(`/hdwallet/${name}`);
+        
+        if (response.success) {
+            currentHDWallet = name;
+            loadHDWalletInfo(name);
+            showToast('HD Wallet loaded!', 'success');
+        }
+    } catch (error) {
+        showToast('HD Wallet not found', 'error');
+    }
+}
+
+async function loadHDWalletInfo(name) {
+    const infoDiv = document.getElementById('hdWalletInfo');
+    
+    try {
+        const response = await api.request(`/hdwallet/${name}`);
+        
+        if (response.success) {
+            const data = response.data;
+            
+            infoDiv.innerHTML = `
+                <div style="padding: 1rem; background: var(--success-bg); border: 1px solid var(--success); border-radius: 8px; margin-top: 1rem;">
+                    <h4>✅ ${data.name}</h4>
+                    <div style="margin-top: 0.5rem; font-size: 0.9rem;">
+                        <p>🔐 Type: HD Wallet (Hierarchical Deterministic)</p>
+                        <p>📋 Addresses Generated: ${data.current_index}</p>
+                        <p>🔑 Mnemonic Words: ${data.mnemonic_words}</p>
+                        <p style="color: var(--warning); margin-top: 0.5rem;">
+                            ⚠️ One mnemonic = Infinite addresses
+                        </p>
+                    </div>
+                </div>
+            `;
+            
+            // Mostrar secciones adicionales
+            document.getElementById('hdAddressesSection').style.display = 'block';
+            document.getElementById('balanceSection').style.display = 'block';
+            document.getElementById('transactionsSection').style.display = 'block';
+            
+            // Cargar direcciones y balance
+            await loadHDAddresses(name);
+            await loadHDBalance(name);
+        }
+    } catch (error) {
+        infoDiv.innerHTML = '<p class="no-data">Error loading HD wallet</p>';
+    }
+}
+
+async function loadHDAddresses(name) {
+    const listDiv = document.getElementById('hdAddressesList');
+    listDiv.innerHTML = '<p class="loading">Loading addresses...</p>';
+    
+    try {
+        const response = await api.request(`/hdwallet/${name}/addresses?limit=20`);
+        
+        if (response.success && response.data.addresses.length > 0) {
+            listDiv.innerHTML = '<div style="display: flex; flex-direction: column; gap: 0.5rem;"></div>';
+            const container = listDiv.querySelector('div');
+            
+            response.data.addresses.forEach(addr => {
+                const addrEl = document.createElement('div');
+                addrEl.style.cssText = 'padding: 0.75rem 1rem; background: var(--dark); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;';
+                
+                addrEl.innerHTML = `
+                    <div>
+                        <span style="color: var(--text-secondary); font-size: 0.9rem;">[${addr.index}]</span>
+                        <code style="margin-left: 0.5rem;">${formatAddress(addr.address)}</code>
+                    </div>
+                    <button class="btn btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;" 
+                            onclick="copyToClipboard('${addr.address}')">
+                        📋 Copy
+                    </button>
+                `;
+                
+                container.appendChild(addrEl);
+            });
+            
+            if (response.data.total > response.data.addresses.length) {
+                const moreEl = document.createElement('div');
+                moreEl.style.cssText = 'padding: 0.5rem; text-align: center; color: var(--text-secondary);';
+                moreEl.textContent = `... and ${response.data.total - response.data.addresses.length} more`;
+                container.appendChild(moreEl);
+            }
+        } else {
+            listDiv.innerHTML = '<p class="no-data">No addresses yet. Derive some!</p>';
+        }
+    } catch (error) {
+        listDiv.innerHTML = '<p class="no-data">Error loading addresses</p>';
+    }
+}
+
+async function loadHDBalance(name) {
+    const balanceDiv = document.getElementById('balanceInfo');
+    balanceDiv.innerHTML = '<p class="loading">Loading balance...</p>';
+    
+    try {
+        const response = await api.request(`/hdwallet/${name}/balance`);
+        
+        if (response.success) {
+            const data = response.data;
+            
+            balanceDiv.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+                    <div style="text-align: center; padding: 1rem; background: var(--dark); border-radius: 8px;">
+                        <div style="font-size: 2rem; color: var(--primary);">💎</div>
+                        <div style="font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;">
+                            ${formatNumber(data.total_balance)}
+                        </div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Total Balance</div>
+                    </div>
+                    <div style="text-align: center; padding: 1rem; background: var(--dark); border-radius: 8px;">
+                        <div style="font-size: 2rem;">📋</div>
+                        <div style="font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;">
+                            ${data.addresses_with_balance}
+                        </div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Addresses w/ Balance</div>
+                    </div>
+                    <div style="text-align: center; padding: 1rem; background: var(--dark); border-radius: 8px;">
+                        <div style="font-size: 2rem;">🔢</div>
+                        <div style="font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;">
+                            ${data.total_addresses}
+                        </div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Total Addresses</div>
+                    </div>
+                </div>
+            `;
+            
+            if (data.balances.length > 0) {
+                balanceDiv.innerHTML += '<h4 style="margin-top: 1.5rem;">Address Balances:</h4><div style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.5rem;"></div>';
+                const balancesContainer = balanceDiv.querySelector('div:last-child');
+                
+                data.balances.forEach(bal => {
+                    const balEl = document.createElement('div');
+                    balEl.style.cssText = 'padding: 0.75rem; background: var(--dark); border-radius: 8px; display: flex; justify-content: space-between;';
+                    balEl.innerHTML = `
+                        <span><code>${formatAddress(bal.address)}</code></span>
+                        <strong style="color: var(--primary);">${formatNumber(bal.balance)} CLC</strong>
+                    `;
+                    balancesContainer.appendChild(balEl);
+                });
+            }
+        }
+    } catch (error) {
+        balanceDiv.innerHTML = '<p class="no-data">Error loading balance</p>';
+    }
+}
+
+async function deriveNewAddress() {
+    if (!currentHDWallet) {
+        showToast('Load HD wallet first', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await api.request(`/hdwallet/${currentHDWallet}/derive`, {
+            method: 'POST',
+            body: JSON.stringify({ count: 1 })
+        });
+        
+        if (response.success) {
+            const addr = response.data.new_addresses[0];
+            showToast(`New address derived: [${addr.index}]`, 'success');
+            loadHDAddresses(currentHDWallet);
+        }
+    } catch (error) {
+        showToast('Error deriving address: ' + error.message, 'error');
+    }
+}
+
+async function deriveMultipleAddresses() {
+    if (!currentHDWallet) {
+        showToast('Load HD wallet first', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await api.request(`/hdwallet/${currentHDWallet}/derive`, {
+            method: 'POST',
+            body: JSON.stringify({ count: 5 })
+        });
+        
+        if (response.success) {
+            showToast(`5 new addresses derived!`, 'success');
+            loadHDAddresses(currentHDWallet);
+        }
+    } catch (error) {
+        showToast('Error deriving addresses: ' + error.message, 'error');
+    }
+}
+
+async function showMnemonic() {
+    if (!currentHDWallet) {
+        showToast('Load HD wallet first', 'warning');
+        return;
+    }
+    
+    const confirm = window.confirm('⚠️ WARNING: Your mnemonic will be displayed on screen. Make sure nobody is watching!');
+    if (!confirm) return;
+    
+    try {
+        const response = await api.request(`/hdwallet/${currentHDWallet}/export`, {
+            method: 'POST',
+            body: JSON.stringify({ confirm: true })
+        });
+        
+        if (response.success) {
+            alert(`🔑 YOUR MNEMONIC:
+
+${response.data.mnemonic}
+
+⚠️ NEVER share these words with anyone!
+⚠️ Anyone with these words can access ALL your funds!`);
+        }
+    } catch (error) {
+        showToast('Error exporting mnemonic: ' + error.message, 'error');
     }
 }
 

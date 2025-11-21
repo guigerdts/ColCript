@@ -126,65 +126,107 @@
                     </div>
                 </div>
             </div>
-
             <!-- Wallet Page -->
             <div class="page" id="wallet">
-                <h2 class="page-title">💼 Gestión de Wallet</h2>
+                <h2 class="page-title">💼 Wallet Manager</h2>
                 
-                <div class="wallet-grid">
-                    <!-- Create/Load Wallet -->
+                <!-- Wallet Type Selection -->
+                <div class="section-card">
+                    <h3>Select Wallet Type</h3>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                        <button class="btn btn-secondary" onclick="showWalletType('standard')" id="btnStandardWallet">
+                            🔑 Standard Wallet
+                        </button>
+                        <button class="btn btn-primary" onclick="showWalletType('hd')" id="btnHDWallet">
+                            🔐 HD Wallet (Recommended)
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Standard Wallet Section -->
+                <div id="standardWalletSection" style="display: none;">
                     <div class="section-card">
-                        <h3>Crear o Cargar Wallet</h3>
-                        <div class="form-group">
-                            <label>Nombre de la Wallet</label>
-                            <input type="text" id="walletName" placeholder="Mi Wallet">
-                        </div>
-                        <div class="button-group">
+                        <h3>🔑 Standard Wallet</h3>
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
                             <button class="btn btn-primary" onclick="createWallet()">
-                                Crear Nueva Wallet
+                                ➕ Create New
                             </button>
-                            <button class="btn btn-secondary" onclick="loadWallet()">
-                                Cargar Wallet
+                            <button class="btn btn-secondary" onclick="document.getElementById('walletFileInput').click()">
+                                📂 Load Wallet
                             </button>
                         </div>
+                        <input type="file" id="walletFileInput" accept=".json" style="display: none;" onchange="loadWalletFromFile(event)">
+                        
+                        <div id="walletInfo"></div>
                     </div>
-
-                    <!-- Wallet Info -->
+                </div>
+                
+                <!-- HD Wallet Section -->
+                <div id="hdWalletSection" style="display: none;">
+                    <!-- Create/Restore HD Wallet -->
                     <div class="section-card">
-                        <h3>Información de Wallet</h3>
-                        <div id="walletInfo">
-                            <p class="no-data">No hay wallet cargada</p>
+                        <h3>🔐 HD Wallet</h3>
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                            <button class="btn btn-primary" onclick="createHDWallet()">
+                                ✨ Create New HD Wallet
+                            </button>
+                            <button class="btn btn-secondary" onclick="showRestoreHDWallet()">
+                                🔄 Restore from Mnemonic
+                            </button>
+                            <button class="btn btn-secondary" onclick="loadExistingHDWallet()">
+                                📂 Load Existing
+                            </button>
                         </div>
+                        
+                        <!-- Restore Form -->
+                        <div id="restoreHDForm" style="display: none; margin-top: 1rem; padding: 1rem; background: var(--dark); border-radius: 8px;">
+                            <h4>Restore HD Wallet</h4>
+                            <div class="form-group">
+                                <label>12-Word Mnemonic Phrase</label>
+                                <textarea id="mnemonicInput" rows="3" placeholder="word1 word2 word3 ..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Wallet Name</label>
+                                <input type="text" id="restoreNameInput" placeholder="MyRestoredWallet">
+                            </div>
+                            <button class="btn btn-primary" onclick="restoreHDWallet()">
+                                🔄 Restore Wallet
+                            </button>
+                        </div>
+                        
+                        <div id="hdWalletInfo"></div>
+                    </div>
+                    
+                    <!-- HD Addresses -->
+                    <div class="section-card" id="hdAddressesSection" style="display: none;">
+                        <h3>📋 Derived Addresses</h3>
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                            <button class="btn btn-primary" onclick="deriveNewAddress()">
+                                ➕ Derive New Address
+                            </button>
+                            <button class="btn btn-secondary" onclick="deriveMultipleAddresses()">
+                                ➕➕ Derive 5 Addresses
+                            </button>
+                            <button class="btn btn-secondary" onclick="showMnemonic()">
+                                🔑 Show Mnemonic
+                            </button>
+                        </div>
+                        <div id="hdAddressesList"></div>
                     </div>
                 </div>
-
-                <!-- Send Transaction -->
-                <div class="section-card">
-                    <h3>💸 Enviar ColCript</h3>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>Dirección Destino</label>
-                            <input type="text" id="sendTo" placeholder="Dirección pública del destinatario">
-                        </div>
-                        <div class="form-group">
-                            <label>Cantidad (CLC)</label>
-                            <input type="number" id="sendAmount" placeholder="10" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label>Fee (CLC)</label>
-                            <input type="number" id="sendFee" value="0.5" step="0.1">
-                        </div>
+                
+                <!-- Balance & Transactions (Common) -->
+                <div class="section-card" id="balanceSection" style="display: none;">
+                    <h3>💰 Balance</h3>
+                    <div id="balanceInfo">
+                        <p class="loading">Load a wallet to see balance</p>
                     </div>
-                    <button class="btn btn-primary" onclick="sendTransaction()">
-                        Enviar Transacción
-                    </button>
                 </div>
-
-                <!-- Transaction History -->
-                <div class="section-card">
-                    <h3>📜 Historial de Transacciones</h3>
+                
+                <div class="section-card" id="transactionsSection" style="display: none;">
+                    <h3>📜 Transaction History</h3>
                     <div id="transactionHistory">
-                        <p class="no-data">Sin historial</p>
+                        <p class="loading">Load a wallet to see transactions</p>
                     </div>
                 </div>
             </div>

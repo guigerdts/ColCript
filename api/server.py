@@ -21,6 +21,7 @@ from utils.statistics import BlockchainStatistics
 from contracts.smart_contract import ContractManager, ContractType
 from network.node import Node
 from mining.pool import MiningPool
+from blockchain.hd_wallet import HDWallet
 import config
 
 app = Flask(__name__, 
@@ -218,7 +219,15 @@ def docs():
             "POST /api/pool/join": "Unirse al pool (body: {miner_id, address})",
             "POST /api/pool/leave": "Salir del pool (body: {miner_id})",
             "POST /api/pool/mine": "Minar bloque colaborativo",
-            "POST /api/pool/submit_share": "Enviar share (body: {miner_id, nonce, block_hash})"
+            "POST /api/pool/submit_share": "Enviar share (body: {miner_id, nonce, block_hash})",
+            "POST /api/hdwallet/create": "Crear HD Wallet (body: {name?})",
+            "POST /api/hdwallet/restore": "Restaurar desde mnemonic (body: {mnemonic, name?})",
+            "GET /api/hdwallet/:file": "Cargar HD Wallet",
+            "GET /api/hdwallet/:file/addresses": "Listar direcciones (query: limit, offset)",
+            "POST /api/hdwallet/:file/derive": "Derivar nuevas direcciones (body: {count?})",
+            "GET /api/hdwallet/:file/balance": "Balance total de todas las direcciones",
+            "POST /api/hdwallet/:file/export": "Exportar mnemonic (body: {confirm: true})",
+            "POST /api/hdwallet/:file/sign": "Firmar mensaje (body: {message, index})"
         }
     })
 
@@ -1318,6 +1327,230 @@ def pool_submit_share():
     else:
         return response_error(msg)
 
+# ==================== ENDPOINTS DE HD WALLET ====================
+
+@app.route('/api/hdwallet/create', methods=['POST'])
+def hdwallet_create():
+    """Crear nueva HD Wallet"""
+    data = request.get_json() or {}
+    name = data.get('name', 'HDWallet')
+    
+    try:
+        wallet = HDWallet(name=name)
+        wallet.save()
+        
+        # Derivar primera dirección
+        first_address = wallet.get_next_address()
+        
+        return response_success({
+            'name': wallet.name,
+            'mnemonic': wallet.mnemonic,
+            'first_address': first_address,
+            'addresses_generated': 1,
+            'warning': '⚠️ SAVE YOUR MNEMONIC! It\'s the only way to recover your wallet.'
+        }, "HD Wallet created successfully")
+    except Exception as e:
+        return response_error(f"Error creating HD wallet: {str(e)}")
+
+@app.route('/api/hdwallet/restore', methods=['POST'])
+def hdwallet_restore():
+    """Restaurar HD Wallet desde mnemonic"""
+    data = request.get_json()
+    
+    if not data or 'mnemonic' not in data:
+        return response_error("mnemonic required")
+    
+    name = data.get('name', 'RestoredHDWallet')
+    
+    try:
+        wallet = HDWallet.from_mnemonic(data['mnemonic'], name=name)
+        wallet.save()
+        
+        # Derivar primera dirección
+        first_address = wallet.get_next_address()
+        
+        return response_success({
+            'name': wallet.name,
+            'first_address': first_address,
+            'addresses_generated': 1
+        }, "HD Wallet restored successfully")
+    except Exception as e:
+        return response_error(f"Error restoring HD wallet: {str(e)}")
+
+@app.route('/api/hdwallet/<filename>')
+def hdwallet_load(filename):
+    """Cargar HD Wallet existente"""
+    try:
+        if not filename.endswith('.json'):
+            filename += '.json'
+        
+        wallet = HDWallet.load(filename)
+        
+        return response_success({
+            'name': wallet.name,
+            'current_index': wallet.current_index,
+            'addresses_count': len(wallet.derived_keys),
+            'mnemonic_words': len(wallet.get_mnemonic_words())
+        })
+    except FileNotFoundError:
+        return response_error("HD Wallet not found", 404)
+    except Exception as e:
+        return response_error(f"Error loading HD wallet: {str(e)}")
+
+@app.route('/api/hdwallet/<filename>/addresses')
+def hdwallet_addresses(filename):
+    """Listar direcciones de HD Wallet"""
+    try:
+        if not filename.endswith('.json'):
+            filename += '.json'
+        
+        wallet = HDWallet.load(filename)
+        
+        # Parámetros de paginación
+        limit = request.args.get('limit', 10, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        
+        # Generar más direcciones si es necesario
+        needed = offset + limit
+        while wallet.current_index < needed:
+            wallet.get_next_address()
+        
+        addresses = wallet.get_all_addresses()
+        paginated = addresses[offset:offset + limit]
+        
+        return response_success({
+            'addresses': paginated,
+            'total': len(addresses),
+            'limit': limit,
+            'offset': offset
+        })
+    except FileNotFoundError:
+        return response_error("HD Wallet not found", 404)
+    except Exception as e:
+        return response_error(f"Error loading addresses: {str(e)}")
+
+@app.route('/api/hdwallet/<filename>/derive', methods=['POST'])
+def hdwallet_derive(filename):
+    """Derivar nueva dirección"""
+    try:
+        if not filename.endswith('.json'):
+            filename += '.json'
+        
+        wallet = HDWallet.load(filename)
+        
+        data = request.get_json() or {}
+        count = data.get('count', 1)
+        
+        new_addresses = []
+        for _ in range(count):
+            addr = wallet.get_next_address()
+            new_addresses.append({
+                'index': wallet.current_index - 1,
+                'address': addr
+            })
+        
+        # Guardar cambios
+        wallet.save(filename)
+        
+        return response_success({
+            'new_addresses': new_addresses,
+            'total_addresses': wallet.current_index
+        }, f"{count} address(es) derived")
+    except FileNotFoundError:
+        return response_error("HD Wallet not found", 404)
+    except Exception as e:
+        return response_error(f"Error deriving address: {str(e)}")
+
+@app.route('/api/hdwallet/<filename>/balance')
+def hdwallet_balance(filename):
+    """Ver balance total de todas las direcciones"""
+    init_blockchain()
+    
+    try:
+        if not filename.endswith('.json'):
+            filename += '.json'
+        
+        wallet = HDWallet.load(filename)
+        addresses = wallet.get_all_addresses()
+        
+        total_balance = 0
+        address_balances = []
+        
+        for addr_info in addresses:
+            addr = addr_info['address']
+            balance = blockchain.get_balance(addr)
+            total_balance += balance
+            
+            if balance > 0:  # Solo mostrar direcciones con balance
+                address_balances.append({
+                    'index': addr_info['index'],
+                    'address': addr,
+                    'balance': balance
+                })
+        
+        return response_success({
+            'total_balance': total_balance,
+            'addresses_with_balance': len(address_balances),
+            'total_addresses': len(addresses),
+            'balances': address_balances
+        })
+    except FileNotFoundError:
+        return response_error("HD Wallet not found", 404)
+    except Exception as e:
+        return response_error(f"Error calculating balance: {str(e)}")
+
+@app.route('/api/hdwallet/<filename>/export', methods=['POST'])
+def hdwallet_export_mnemonic(filename):
+    """Exportar mnemonic (requiere confirmación)"""
+    try:
+        if not filename.endswith('.json'):
+            filename += '.json'
+        
+        data = request.get_json() or {}
+        confirm = data.get('confirm', False)
+        
+        if not confirm:
+            return response_error("Confirmation required. Set 'confirm': true")
+        
+        wallet = HDWallet.load(filename)
+        
+        return response_success({
+            'mnemonic': wallet.mnemonic,
+            'words': wallet.get_mnemonic_words(),
+            'warning': '⚠️ NEVER share your mnemonic! Anyone with these words can access ALL your funds.'
+        })
+    except FileNotFoundError:
+        return response_error("HD Wallet not found", 404)
+    except Exception as e:
+        return response_error(f"Error exporting mnemonic: {str(e)}")
+
+@app.route('/api/hdwallet/<filename>/sign', methods=['POST'])
+def hdwallet_sign(filename):
+    """Firmar mensaje con dirección específica"""
+    try:
+        if not filename.endswith('.json'):
+            filename += '.json'
+        
+        data = request.get_json()
+        
+        if not data or 'message' not in data or 'index' not in data:
+            return response_error("message and index required")
+        
+        wallet = HDWallet.load(filename)
+        
+        signature = wallet.sign_message(data['message'], data['index'])
+        address = wallet.get_address(data['index'])
+        
+        return response_success({
+            'message': data['message'],
+            'signature': signature,
+            'address': address,
+            'index': data['index']
+        })
+    except FileNotFoundError:
+        return response_error("HD Wallet not found", 404)
+    except Exception as e:
+        return response_error(f"Error signing message: {str(e)}")
 
 # ==================== INICIO DEL SERVIDOR ====================
 
