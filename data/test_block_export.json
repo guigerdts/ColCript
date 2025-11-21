@@ -1,0 +1,35 @@
+{
+  "block_info": {
+    "index": 0,
+    "timestamp": 1763347827.217016,
+    "hash": "000014b4669b9110d1cd7f5a9eee40e857303b07cac02b548389a73a6cf263ef",
+    "previous_hash": "0",
+    "miner": "GENESIS",
+    "nonce": 4325,
+    "transactions_count": 1,
+    "total_amount": 0,
+    "difficulty": 4,
+    "size_bytes": 313
+  },
+  "verification": {
+    "valid": true,
+    "issues": []
+  },
+  "full_block": {
+    "index": 0,
+    "timestamp": 1763347827.217016,
+    "transactions": [
+      {
+        "sender": "MINING",
+        "recipient": "GENESIS",
+        "amount": 0,
+        "timestamp": 1763347827.216999,
+        "signature": null
+      }
+    ],
+    "previous_hash": "0",
+    "miner_address": "GENESIS",
+    "nonce": 4325,
+    "hash": "000014b4669b9110d1cd7f5a9eee40e857303b07cac02b548389a73a6cf263ef"
+  }
+}

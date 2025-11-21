@@ -1,0 +1,36 @@
+{
+  "wallet_address": "f8e1aaaa813aa794ff10b8e98fd8c699190fa592e6d9ff89cc2ecf390df50ec3c1c38360ef54f019e95f7802b5ac0468ac7b70a782c108d00640a367e3b569c8",
+  "export_date": "2025-11-16T22:23:55.176712",
+  "summary": {
+    "wallet_address": "f8e1aaaa813aa794ff10b8e98fd8c6...",
+    "transacciones_totales": 2,
+    "enviadas": 1,
+    "recibidas": 0,
+    "recompensas_minado": 1,
+    "total_enviado": 20,
+    "total_recibido": 50,
+    "balance_neto": 30
+  },
+  "transactions": [
+    {
+      "block": 1,
+      "timestamp": 1763347827.3145952,
+      "sender": "MINING",
+      "recipient": "f8e1aaaa813aa794ff10b8e98fd8c699190fa592e6d9ff89cc2ecf390df50ec3c1c38360ef54f019e95f7802b5ac0468ac7b70a782c108d00640a367e3b569c8",
+      "amount": 50,
+      "signature": null,
+      "block_hash": "0000bcb220c061adfe359a9805c0d3be5efe9c37d7709e18e0bfa3bc5b4257df",
+      "type": "MINADO"
+    },
+    {
+      "block": 2,
+      "timestamp": 1763347828.4970877,
+      "sender": "f8e1aaaa813aa794ff10b8e98fd8c699190fa592e6d9ff89cc2ecf390df50ec3c1c38360ef54f019e95f7802b5ac0468ac7b70a782c108d00640a367e3b569c8",
+      "recipient": "b9afdb4cdf144388edf8c53cfa0fce754ab7588d85b5b373bffc5ca481fd7b5e2a5a8b177d3412fb970f453d906222ab067bc28a2d9692f8071c680f5790089b",
+      "amount": 20,
+      "signature": "f7a68af98f7ddf5949a33f13aed92267c01e15ae01a24a8c8ac91005ace7368a99e3e24eae4a89de6eebd53bff83b9415378afd6fb72dfd893db0abcc641a13e",
+      "block_hash": "00005c328635d638045b3696b56168d3fc98ee0841c469152fa953db91c5ed17",
+      "type": "ENVIADO"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "next_id": 2,
+  "contracts": {
+    "TL-1": {
+      "contract_id": "TL-1",
+      "contract_type": "timelock",
+      "creator": "a9f172afdc07b55e18490bb287fd6d232e3434aeb362828f2e66f05e4973f5989b0d67c44e89c2600ff79ab78c32665d5e8c164bc44442b6f7e6c54aa67c50b0",
+      "script": [
+        10,
+        "177",
+        1
+      ],
+      "data": {
+        "unlock_block": 10,
+        "amount": 50.0,
+        "recipient": "Guillo1.json"
+      },
+      "created_at": 1763644848.739883,
+      "executed": true,
+      "execution_result": {
+        "success": true,
+        "message": "Script executed successfully. Gas used: 3",
+        "gas_used": 3,
+        "operations": [
+          "PUSH 10",
+          "CHECKLOCKTIMEVERIFY (height: 11 >= 10)",
+          "PUSH 1"
+        ],
+        "final_stack": [
+          1
+        ]
+      },
+      "execution_block": 11
+    }
+  }
+}

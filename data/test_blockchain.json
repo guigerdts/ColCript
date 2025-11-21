@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "difficulty": 4,
+  "mining_reward": 50,
+  "timestamp": "2025-11-16T21:37:21.767343",
+  "blocks": [
+    {
+      "index": 0,
+      "timestamp": 1763347041.1035063,
+      "previous_hash": "0",
+      "miner_address": "GENESIS",
+      "nonce": 31388,
+      "hash": "000051d21b7d6fc2fda823e1561624fa1f663e31cb1d50fe0d3928b899cb40c9",
+      "transactions": [
+        {
+          "sender": "MINING",
+          "recipient": "GENESIS",
+          "amount": 0,
+          "timestamp": 1763347041.103488,
+          "signature": null
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "timestamp": 1763347041.6807444,
+      "previous_hash": "000051d21b7d6fc2fda823e1561624fa1f663e31cb1d50fe0d3928b899cb40c9",
+      "miner_address": "5746eba44c743038aede32ecefc3d02b9f167ca7b052eef5089b01ce1a1a1bd9519203cc87e44ce1bb1ad7e99d60bf1f5bbd90da4a934124f6fc38639510d86f",
+      "nonce": 4493,
+      "hash": "00008815e496af53dfb51bf66ebc53d5d985df7de4b7b3e34fbea96c00da87df",
+      "transactions": [
+        {
+          "sender": "MINING",
+          "recipient": "5746eba44c743038aede32ecefc3d02b9f167ca7b052eef5089b01ce1a1a1bd9519203cc87e44ce1bb1ad7e99d60bf1f5bbd90da4a934124f6fc38639510d86f",
+          "amount": 50,
+          "timestamp": 1763347041.6807337,
+          "signature": null
+        }
+      ]
+    }
+  ]
+}
