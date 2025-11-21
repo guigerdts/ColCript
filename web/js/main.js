@@ -1251,6 +1251,265 @@ async function syncNetwork() {
     }
 }
 
+// ==================== POOL PAGE ====================
+
+async function loadPoolPage() {
+    await loadPoolInfo();
+    await loadPoolMiners();
+    await loadPoolLeaderboard();
+}
+
+async function loadPoolInfo() {
+    const container = document.getElementById('poolInfo');
+    container.innerHTML = '<p class="loading">Loading pool info...</p>';
+    
+    try {
+        const response = await api.request('/pool/info');
+        
+        if (response.success) {
+            const info = response.data;
+            
+            container.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <div style="padding: 1rem; background: var(--dark); border-radius: 8px; text-align: center;">
+                        <div style="font-size: 2rem; color: var(--primary);">⛏️</div>
+                        <div style="font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;">${info.pool_name}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Pool Name</div>
+                    </div>
+                    <div style="padding: 1rem; background: var(--dark); border-radius: 8px; text-align: center;">
+                        <div style="font-size: 2rem; color: var(--warning);">💰</div>
+                        <div style="font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;">${info.pool_fee}%</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Pool Fee</div>
+                    </div>
+                    <div style="padding: 1rem; background: var(--dark); border-radius: 8px; text-align: center;">
+                        <div style="font-size: 2rem; color: var(--success);">👷</div>
+                        <div style="font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;">${info.total_miners}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Total Miners</div>
+                    </div>
+                    <div style="padding: 1rem; background: var(--dark); border-radius: 8px; text-align: center;">
+                        <div style="font-size: 2rem; color: var(--primary);">✅</div>
+                        <div style="font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;">${info.active_miners}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Active Miners</div>
+                    </div>
+                    <div style="padding: 1rem; background: var(--dark); border-radius: 8px; text-align: center;">
+                        <div style="font-size: 2rem;">📦</div>
+                        <div style="font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;">${info.blocks_found}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">Blocks Found</div>
+                    </div>
+                    <div style="padding: 1rem; background: var(--dark); border-radius: 8px; text-align: center;">
+                        <div style="font-size: 2rem;">💎</div>
+                        <div style="font-size: 1.5rem; font-weight: bold; margin-top: 0.5rem;">${formatNumber(info.rewards_distributed)}</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9rem;">CLC Distributed</div>
+                    </div>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading pool info:', error);
+        container.innerHTML = '<p class="no-data">Error loading pool info</p>';
+    }
+}
+
+async function loadPoolMiners() {
+    const container = document.getElementById('poolMinersList');
+    container.innerHTML = '<p class="loading">Loading miners...</p>';
+    
+    try {
+        const response = await api.request('/pool/miners');
+        
+        if (response.success && response.data.count > 0) {
+            container.innerHTML = '<div style="display: flex; flex-direction: column; gap: 0.5rem;"></div>';
+            const list = container.querySelector('div');
+            
+            response.data.miners.forEach(miner => {
+                const minerEl = document.createElement('div');
+                minerEl.style.cssText = 'padding: 1rem; background: var(--dark); border: 1px solid var(--border); border-radius: 8px;';
+                
+                minerEl.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>⛏️ ${miner.miner_id}</strong>
+                            <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.3rem;">
+                                Address: ${formatAddress(miner.address)}
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 1.2rem; font-weight: bold; color: var(--primary);">${miner.shares}</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">shares</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); display: flex; gap: 1rem;">
+                        <span>📊 ${miner.hashrate} H/s</span>
+                        <span>🎯 ${miner.total_shares} total</span>
+                        <span>⏱️ ${miner.uptime}</span>
+                    </div>
+                `;
+                
+                list.appendChild(minerEl);
+            });
+        } else {
+            container.innerHTML = '<p class="no-data">No miners in pool</p>';
+        }
+    } catch (error) {
+        console.error('Error loading miners:', error);
+        container.innerHTML = '<p class="no-data">Error loading miners</p>';
+    }
+}
+
+async function loadPoolLeaderboard() {
+    const container = document.getElementById('poolLeaderboard');
+    container.innerHTML = '<p class="loading">Loading leaderboard...</p>';
+    
+    try {
+        const response = await api.request('/pool/leaderboard?limit=10');
+        
+        if (response.success && response.data.count > 0) {
+            container.innerHTML = '<div style="display: flex; flex-direction: column; gap: 0.5rem;"></div>';
+            const list = container.querySelector('div');
+            
+            response.data.leaderboard.forEach((miner, index) => {
+                const position = index + 1;
+                let medal = '';
+                if (position === 1) medal = '🥇';
+                else if (position === 2) medal = '🥈';
+                else if (position === 3) medal = '🥉';
+                else medal = `${position}.`;
+                
+                const minerEl = document.createElement('div');
+                minerEl.style.cssText = 'padding: 0.75rem 1rem; background: var(--dark); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;';
+                
+                minerEl.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span style="font-size: 1.5rem; min-width: 2rem;">${medal}</span>
+                        <div>
+                            <strong>${miner.miner_id}</strong>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                ${miner.blocks_found} blocks found
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1.2rem; font-weight: bold; color: var(--primary);">
+                            ${miner.total_shares}
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">shares</div>
+                    </div>
+                `;
+                
+                list.appendChild(minerEl);
+            });
+        } else {
+            container.innerHTML = '<p class="no-data">No leaderboard data yet</p>';
+        }
+    } catch (error) {
+        console.error('Error loading leaderboard:', error);
+        container.innerHTML = '<p class="no-data">Error loading leaderboard</p>';
+    }
+}
+
+async function joinPool() {
+    const minerIdInput = document.getElementById('minerIdInput');
+    const minerId = minerIdInput.value.trim();
+    
+    if (!minerId) {
+        showToast('Enter a miner ID', 'warning');
+        return;
+    }
+    
+    if (!currentWallet) {
+        showToast('Load a wallet first', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await api.request('/pool/join', {
+            method: 'POST',
+            body: JSON.stringify({
+                miner_id: minerId,
+                address: currentWallet.address
+            })
+        });
+        
+        if (response.success) {
+            showToast(`Joined ${response.data.pool_name}!`, 'success');
+            minerIdInput.value = '';
+            loadPoolPage();
+        }
+    } catch (error) {
+        showToast('Error joining pool: ' + error.message, 'error');
+    }
+}
+
+async function leavePool() {
+    const minerIdInput = document.getElementById('minerIdInput');
+    const minerId = minerIdInput.value.trim();
+    
+    if (!minerId) {
+        showToast('Enter your miner ID', 'warning');
+        return;
+    }
+    
+    const confirm = window.confirm(`Leave pool as ${minerId}?`);
+    if (!confirm) return;
+    
+    try {
+        const response = await api.request('/pool/leave', {
+            method: 'POST',
+            body: JSON.stringify({
+                miner_id: minerId
+            })
+        });
+        
+        if (response.success) {
+            showToast('Left the pool', 'success');
+            minerIdInput.value = '';
+            loadPoolPage();
+        }
+    } catch (error) {
+        showToast('Error leaving pool: ' + error.message, 'error');
+    }
+}
+
+async function poolMine() {
+    const statusDiv = document.getElementById('poolMiningStatus');
+    
+    statusDiv.innerHTML = '<p class="loading">⛏️ Mining block collaboratively...</p>';
+    
+    try {
+        const response = await api.request('/pool/mine', {
+            method: 'POST'
+        });
+        
+        if (response.success) {
+            const data = response.data;
+            
+            let distributionHTML = '<div style="margin-top: 1rem;"><strong>💰 Distribution:</strong><ul style="margin-top: 0.5rem;">';
+            for (const [minerId, amount] of Object.entries(data.distribution)) {
+                distributionHTML += `<li>${minerId}: ${formatNumber(amount)} CLC</li>`;
+            }
+            distributionHTML += '</ul></div>';
+            
+            statusDiv.innerHTML = `
+                <div style="padding: 1rem; background: var(--success-bg); border: 1px solid var(--success); border-radius: 8px;">
+                    <strong>✅ Block #${data.block_index} mined!</strong>
+                    ${distributionHTML}
+                </div>
+            `;
+            
+            showToast('Block mined successfully!', 'success');
+            
+            // Recargar datos
+            setTimeout(() => {
+                loadPoolPage();
+                statusDiv.innerHTML = '<p>Pool is ready to mine</p>';
+            }, 3000);
+        }
+    } catch (error) {
+        statusDiv.innerHTML = '<p>Pool is ready to mine</p>';
+        showToast('Error mining: ' + error.message, 'error');
+    }
+}
+
 // ==================== EXPORT FUNCTIONS ====================
 
 window.createWallet = createWallet;

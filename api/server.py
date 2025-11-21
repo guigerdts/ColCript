@@ -20,6 +20,7 @@ from blockchain.block_explorer import BlockExplorer
 from utils.statistics import BlockchainStatistics
 from contracts.smart_contract import ContractManager, ContractType
 from network.node import Node
+from mining.pool import MiningPool
 import config
 
 app = Flask(__name__, 
@@ -30,6 +31,7 @@ app = Flask(__name__,
 blockchain = None
 contract_manager = None
 p2p_node = None
+mining_pool = None
 storage = BlockchainStorage()
 current_wallet = None
 
@@ -37,7 +39,7 @@ current_wallet = None
 
 def init_blockchain():
     """Inicializa o carga blockchain"""
-    global blockchain, contract_manager, p2p_node
+    global blockchain, contract_manager, p2p_node, mining_pool
     
     if blockchain is None:
         try:
@@ -68,6 +70,28 @@ def init_blockchain():
             # Crear nodo con localhost si falla
             p2p_node = Node(host='127.0.0.1', port=6000, blockchain=blockchain)
             p2p_node.start()
+
+    # Inicializar nodo P2P
+    if p2p_node is None and blockchain is not None:
+        try:
+            import socket
+            hostname = socket.gethostname()
+            local_ip = socket.gethostbyname(hostname)
+            p2p_node = Node(host=local_ip, port=6000, blockchain=blockchain)
+            p2p_node.start()
+        except Exception as e:
+            print(f"⚠️  No se pudo iniciar nodo P2P: {e}")
+            p2p_node = Node(host='127.0.0.1', port=6000, blockchain=blockchain)
+            p2p_node.start()
+    
+    # Inicializar pool de minería
+    if mining_pool is None and blockchain is not None:
+        mining_pool = MiningPool(
+            blockchain=blockchain,
+            pool_name="ColCript Official Pool",
+            pool_fee=1.5
+        )
+
 
     return blockchain
 
@@ -186,7 +210,15 @@ def docs():
             "POST /api/network/sync": "Sincronizar con red",
             "POST /api/network/transaction": "Recibir transacción de peer",
             "POST /api/network/block": "Recibir bloque de peer",
-            "POST /api/network/discover": "Descubrir peers (body: {seed_nodes})"
+            "POST /api/network/discover": "Descubrir peers (body: {seed_nodes})",
+            "GET /api/pool/info": "Información del pool",
+            "GET /api/pool/miners": "Lista de mineros",
+            "GET /api/pool/leaderboard": "Ranking de mineros (query: limit)",
+            "GET /api/pool/miner/:id": "Estadísticas de minero",
+            "POST /api/pool/join": "Unirse al pool (body: {miner_id, address})",
+            "POST /api/pool/leave": "Salir del pool (body: {miner_id})",
+            "POST /api/pool/mine": "Minar bloque colaborativo",
+            "POST /api/pool/submit_share": "Enviar share (body: {miner_id, nonce, block_hash})"
         }
     })
 
@@ -1130,6 +1162,162 @@ def discover_peers():
         'discovered': discovered,
         'total_peers': len(p2p_node.peers)
     }, f"Discovered {discovered} new peers")
+
+# ==================== ENDPOINTS DE MINING POOL ====================
+
+@app.route('/api/pool/info')
+def pool_info():
+    """Información del pool de minería"""
+    init_blockchain()
+    
+    if not mining_pool:
+        return response_error("Mining pool not initialized")
+    
+    return response_success(mining_pool.get_stats())
+
+@app.route('/api/pool/miners')
+def pool_miners():
+    """Lista de mineros en el pool"""
+    init_blockchain()
+    
+    if not mining_pool:
+        return response_error("Mining pool not initialized")
+    
+    miners = mining_pool.get_all_miners()
+    
+    return response_success({
+        'count': len(miners),
+        'miners': miners
+    })
+
+@app.route('/api/pool/leaderboard')
+def pool_leaderboard():
+    """Ranking de mineros"""
+    init_blockchain()
+    
+    if not mining_pool:
+        return response_error("Mining pool not initialized")
+    
+    limit = request.args.get('limit', 10, type=int)
+    leaderboard = mining_pool.get_leaderboard(limit)
+    
+    return response_success({
+        'count': len(leaderboard),
+        'leaderboard': leaderboard
+    })
+
+@app.route('/api/pool/miner/<miner_id>')
+def pool_miner_stats(miner_id):
+    """Estadísticas de un minero específico"""
+    init_blockchain()
+    
+    if not mining_pool:
+        return response_error("Mining pool not initialized")
+    
+    stats = mining_pool.get_miner_stats(miner_id)
+    
+    if not stats:
+        return response_error(f"Miner {miner_id} not found", 404)
+    
+    return response_success(stats)
+
+@app.route('/api/pool/join', methods=['POST'])
+def pool_join():
+    """Unirse al pool"""
+    init_blockchain()
+    
+    if not mining_pool:
+        return response_error("Mining pool not initialized")
+    
+    data = request.get_json()
+    if not data or 'miner_id' not in data or 'address' not in data:
+        return response_error("miner_id and address required")
+    
+    success, msg = mining_pool.add_miner(data['miner_id'], data['address'])
+    
+    if success:
+        return response_success({
+            'miner_id': data['miner_id'],
+            'pool_name': mining_pool.pool_name,
+            'pool_fee': mining_pool.pool_fee
+        }, msg)
+    else:
+        return response_error(msg)
+
+@app.route('/api/pool/leave', methods=['POST'])
+def pool_leave():
+    """Salir del pool"""
+    init_blockchain()
+    
+    if not mining_pool:
+        return response_error("Mining pool not initialized")
+    
+    data = request.get_json()
+    if not data or 'miner_id' not in data:
+        return response_error("miner_id required")
+    
+    success, msg = mining_pool.remove_miner(data['miner_id'])
+    
+    if success:
+        return response_success({
+            'miner_id': data['miner_id']
+        }, msg)
+    else:
+        return response_error(msg)
+
+@app.route('/api/pool/mine', methods=['POST'])
+def pool_mine():
+    """Minar bloque colaborativamente"""
+    init_blockchain()
+    
+    if not mining_pool:
+        return response_error("Mining pool not initialized")
+    
+    if len(mining_pool.miners) == 0:
+        return response_error("No miners in pool")
+    
+    # Minar bloque
+    success, msg, distribution = mining_pool.mine_block()
+    
+    if success:
+        return response_success({
+            'block_index': len(blockchain.chain) - 1,
+            'distribution': distribution,
+            'pool_stats': mining_pool.get_stats()
+        }, msg)
+    else:
+        return response_error(msg)
+
+@app.route('/api/pool/submit_share', methods=['POST'])
+def pool_submit_share():
+    """Enviar share al pool"""
+    init_blockchain()
+    
+    if not mining_pool:
+        return response_error("Mining pool not initialized")
+    
+    data = request.get_json()
+    required = ['miner_id', 'nonce', 'block_hash']
+    
+    for field in required:
+        if field not in data:
+            return response_error(f"Field '{field}' required")
+    
+    success, msg = mining_pool.submit_share(
+        data['miner_id'],
+        data['nonce'],
+        data['block_hash']
+    )
+    
+    if success:
+        miner_stats = mining_pool.get_miner_stats(data['miner_id'])
+        return response_success({
+            'miner_stats': miner_stats,
+            'pool_stats': mining_pool.get_stats()
+        }, msg)
+    else:
+        return response_error(msg)
+
 
 # ==================== INICIO DEL SERVIDOR ====================
 

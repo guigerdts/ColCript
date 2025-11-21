@@ -49,6 +49,9 @@
                 <a href="#" class="nav-link" data-page="network">
                     <span>🌐</span> Red P2P
                 </a>
+                <a href="#" class="nav-link" data-page="pool">
+                    <span>⛏️</span> Mining Pool
+                </a>
                 <a href="#" class="nav-link" data-page="settings">
                     <span>⚙️</span> Ajustes
                 </a>
@@ -413,6 +416,62 @@
                     <div style="display: flex; gap: 1rem; margin-top: 1rem;">
                         <button class="btn btn-primary" onclick="addPeer()">Agregar</button>
                         <button class="btn btn-secondary" onclick="closeAddPeerModal()">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+            <!-- Mining Pool Page -->
+            <div class="page" id="pool">
+                <h2 class="page-title">⛏️ Mining Pool</h2>
+                
+                <!-- Pool Info -->
+                <div class="section-card">
+                    <h3>📊 Pool Information</h3>
+                    <div id="poolInfo">
+                        <p class="loading">Loading pool info...</p>
+                    </div>
+                </div>
+                
+                <!-- Join Pool -->
+                <div class="section-card">
+                    <h3>👥 Join Pool</h3>
+                    <div class="form-group">
+                        <label>Miner ID</label>
+                        <input type="text" id="minerIdInput" placeholder="my-miner">
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn btn-primary" onclick="joinPool()">
+                            ➕ Join Pool
+                        </button>
+                        <button class="btn btn-secondary" onclick="leavePool()">
+                            ❌ Leave Pool
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Pool Mining -->
+                <div class="section-card">
+                    <h3>⛏️ Collaborative Mining</h3>
+                    <div id="poolMiningStatus" style="margin-bottom: 1rem;">
+                        <p>Pool is ready to mine</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="poolMine()">
+                        ⛏️ Mine Block (Pool)
+                    </button>
+                </div>
+                
+                <!-- Active Miners -->
+                <div class="section-card">
+                    <h3>👷 Active Miners</h3>
+                    <div id="poolMinersList">
+                        <p class="loading">Loading miners...</p>
+                    </div>
+                </div>
+                
+                <!-- Leaderboard -->
+                <div class="section-card">
+                    <h3>🏆 Leaderboard</h3>
+                    <div id="poolLeaderboard">
+                        <p class="loading">Loading leaderboard...</p>
                     </div>
                 </div>
             </div>
