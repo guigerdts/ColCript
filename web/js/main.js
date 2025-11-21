@@ -247,6 +247,11 @@ async function loadWalletPage() {
 
             currentWallet = balance.data;
 
+            // Mostrar secciones
+            document.getElementById('balanceSection').style.display = 'block';
+            document.getElementById('qrSection').style.display = 'block';
+            document.getElementById('transactionsSection').style.display = 'block';
+
             // Load transaction history
             loadTransactionHistory();
             
@@ -458,6 +463,7 @@ async function loadHDWalletInfo(name) {
             // Mostrar secciones adicionales
             document.getElementById('hdAddressesSection').style.display = 'block';
             document.getElementById('balanceSection').style.display = 'block';
+            document.getElementById('qrSection').style.display = 'block';
             document.getElementById('transactionsSection').style.display = 'block';
             
             // Cargar direcciones y balance
@@ -1840,6 +1846,160 @@ async function poolMine() {
         statusDiv.innerHTML = '<p>Pool is ready to mine</p>';
         showToast('Error mining: ' + error.message, 'error');
     }
+}
+
+// ==================== QR CODE FUNCTIONS ====================
+
+let currentQRImage = null;
+
+async function showAddressQR() {
+    const address = getCurrentWalletAddress();
+    
+    if (!address) {
+        showToast('Load a wallet first', 'warning');
+        return;
+    }
+    
+    // Ocultar form de payment
+    document.getElementById('paymentQRForm').style.display = 'none';
+    
+    try {
+        const response = await api.request(`/qr/address/${address}`);
+        
+        if (response.success) {
+            displayQR(response.data.qr_image, {
+                title: 'Wallet Address',
+                address: address
+            });
+        }
+    } catch (error) {
+        showToast('Error generating QR: ' + error.message, 'error');
+    }
+}
+
+function showPaymentQR() {
+    const address = getCurrentWalletAddress();
+    
+    if (!address) {
+        showToast('Load a wallet first', 'warning');
+        return;
+    }
+    
+    // Mostrar form
+    const form = document.getElementById('paymentQRForm');
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    
+    // Ocultar QR display
+    document.getElementById('qrDisplay').style.display = 'none';
+}
+
+async function generatePaymentQR() {
+    const address = getCurrentWalletAddress();
+    
+    if (!address) {
+        showToast('Load a wallet first', 'warning');
+        return;
+    }
+    
+    const amount = parseFloat(document.getElementById('qrAmount').value);
+    const memo = document.getElementById('qrMemo').value.trim();
+    
+    if (isNaN(amount) || amount <= 0) {
+        showToast('Enter a valid amount', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await api.request('/qr/payment', {
+            method: 'POST',
+            body: JSON.stringify({
+                address: address,
+                amount: amount,
+                memo: memo || undefined
+            })
+        });
+        
+        if (response.success) {
+            displayQR(response.data.qr_image, {
+                title: 'Payment Request',
+                address: address,
+                amount: amount,
+                memo: memo,
+                uri: response.data.uri
+            });
+            
+            // Limpiar form
+            document.getElementById('qrAmount').value = '';
+            document.getElementById('qrMemo').value = '';
+        }
+    } catch (error) {
+        showToast('Error generating payment QR: ' + error.message, 'error');
+    }
+}
+
+function displayQR(qrImage, info) {
+    currentQRImage = qrImage;
+    
+    const qrDisplay = document.getElementById('qrDisplay');
+    const qrImageEl = document.getElementById('qrImage');
+    const qrInfoEl = document.getElementById('qrInfo');
+    
+    qrImageEl.innerHTML = `<img src="${qrImage}" alt="QR Code" style="max-width: 300px; border: 2px solid #ddd; border-radius: 8px;">`;
+    
+    let infoHTML = `<strong>${info.title}</strong><br>`;
+    infoHTML += `<code style="font-size: 0.9rem; word-break: break-all;">${formatAddress(info.address)}</code>`;
+    
+    if (info.amount) {
+        infoHTML += `<br><strong>Amount:</strong> ${formatNumber(info.amount)} CLC`;
+    }
+    
+    if (info.memo) {
+        infoHTML += `<br><strong>Memo:</strong> ${info.memo}`;
+    }
+    
+    if (info.uri) {
+        infoHTML += `<br><br><small style="color: #666;">URI: ${info.uri}</small>`;
+    }
+    
+    qrInfoEl.innerHTML = infoHTML;
+    qrDisplay.style.display = 'block';
+    
+    showToast('QR Code generated!', 'success');
+}
+
+function downloadQR() {
+    if (!currentQRImage) {
+        showToast('No QR code to download', 'warning');
+        return;
+    }
+    
+    // Crear link de descarga
+    const link = document.createElement('a');
+    link.href = currentQRImage;
+    link.download = `colcript-qr-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showToast('QR Code downloaded!', 'success');
+}
+
+function getCurrentWalletAddress() {
+    // Intentar obtener dirección de wallet actual
+    if (currentWallet && currentWallet.address) {
+        return currentWallet.address;
+    }
+    
+    // Si es HD wallet, usar la primera dirección derivada
+    if (currentHDWallet) {
+        // Intentar obtener del DOM
+        const firstAddress = document.querySelector('#hdAddressesList code');
+        if (firstAddress) {
+            return firstAddress.textContent;
+        }
+    }
+    
+    return null;
 }
 
 // ==================== EXPORT FUNCTIONS ====================

@@ -129,7 +129,7 @@
             <!-- Wallet Page -->
             <div class="page" id="wallet">
                 <h2 class="page-title">💼 Wallet Manager</h2>
-                
+
                 <!-- Wallet Type Selection -->
                 <div class="section-card">
                     <h3>Select Wallet Type</h3>
@@ -142,7 +142,7 @@
                         </button>
                     </div>
                 </div>
-                
+
                 <!-- Standard Wallet Section -->
                 <div id="standardWalletSection" style="display: none;">
                     <div class="section-card">
@@ -156,11 +156,11 @@
                             </button>
                         </div>
                         <input type="file" id="walletFileInput" accept=".json" style="display: none;" onchange="loadWalletFromFile(event)">
-                        
+
                         <div id="walletInfo"></div>
                     </div>
                 </div>
-                
+
                 <!-- HD Wallet Section -->
                 <div id="hdWalletSection" style="display: none;">
                     <!-- Create/Restore HD Wallet -->
@@ -177,7 +177,7 @@
                                 📂 Load Existing
                             </button>
                         </div>
-                        
+
                         <!-- Restore Form -->
                         <div id="restoreHDForm" style="display: none; margin-top: 1rem; padding: 1rem; background: var(--dark); border-radius: 8px;">
                             <h4>Restore HD Wallet</h4>
@@ -193,10 +193,10 @@
                                 🔄 Restore Wallet
                             </button>
                         </div>
-                        
+
                         <div id="hdWalletInfo"></div>
                     </div>
-                    
+
                     <!-- HD Addresses -->
                     <div class="section-card" id="hdAddressesSection" style="display: none;">
                         <h3>📋 Derived Addresses</h3>
@@ -214,15 +214,54 @@
                         <div id="hdAddressesList"></div>
                     </div>
                 </div>
-                
-                <!-- Balance & Transactions (Common) -->
+
+                <!-- Balance Section -->
                 <div class="section-card" id="balanceSection" style="display: none;">
                     <h3>💰 Balance</h3>
                     <div id="balanceInfo">
                         <p class="loading">Load a wallet to see balance</p>
                     </div>
                 </div>
-                
+
+                <!-- QR Code Section -->
+                <div class="section-card" id="qrSection" style="display: none;">
+                    <h3>📱 QR Code</h3>
+                    <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                        <button class="btn btn-primary" onclick="showAddressQR()">
+                            📷 Address QR
+                        </button>
+                        <button class="btn btn-secondary" onclick="showPaymentQR()">
+                            💰 Payment QR
+                        </button>
+                    </div>
+
+                    <!-- QR Display -->
+                    <div id="qrDisplay" style="text-align: center; padding: 1rem; background: white; border-radius: 8px; display: none;">
+                        <div id="qrImage"></div>
+                        <div id="qrInfo" style="margin-top: 1rem; color: #333;"></div>
+                        <button class="btn btn-secondary" onclick="downloadQR()" style="margin-top: 1rem;">
+                            💾 Download QR
+                        </button>
+                    </div>
+
+                    <!-- Payment QR Form -->
+                    <div id="paymentQRForm" style="display: none; margin-top: 1rem; padding: 1rem; background: var(--dark); border-radius: 8px;">
+                        <h4>Create Payment QR</h4>
+                        <div class="form-group">
+                            <label>Amount (CLC)</label>
+                            <input type="number" id="qrAmount" step="0.01" placeholder="10.5">
+                        </div>
+                        <div class="form-group">
+                            <label>Memo (Optional)</label>
+                            <input type="text" id="qrMemo" placeholder="Payment for...">
+                        </div>
+                        <button class="btn btn-primary" onclick="generatePaymentQR()">
+                            ✨ Generate QR
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Transaction History -->
                 <div class="section-card" id="transactionsSection" style="display: none;">
                     <h3>📜 Transaction History</h3>
                     <div id="transactionHistory">
@@ -230,7 +269,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Mining Page -->
             <div class="page" id="mining">
                 <h2 class="page-title">⛏️ Minería</h2>

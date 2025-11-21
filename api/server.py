@@ -22,6 +22,7 @@ from contracts.smart_contract import ContractManager, ContractType
 from network.node import Node
 from mining.pool import MiningPool
 from blockchain.hd_wallet import HDWallet
+from utils.qr_generator import QRGenerator
 import config
 
 app = Flask(__name__, 
@@ -227,7 +228,10 @@ def docs():
             "POST /api/hdwallet/:file/derive": "Derivar nuevas direcciones (body: {count?})",
             "GET /api/hdwallet/:file/balance": "Balance total de todas las direcciones",
             "POST /api/hdwallet/:file/export": "Exportar mnemonic (body: {confirm: true})",
-            "POST /api/hdwallet/:file/sign": "Firmar mensaje (body: {message, index})"
+            "POST /api/hdwallet/:file/sign": "Firmar mensaje (body: {message, index})",
+            "GET /api/qr/address/:address": "Generar QR de dirección (query: size, border)",
+            "POST /api/qr/payment": "Generar QR de pago (body: {address, amount?, memo?, size?, border?})",
+            "POST /api/qr/parse": "Parsear URI de pago (body: {uri})"
         }
     })
 
@@ -1551,6 +1555,86 @@ def hdwallet_sign(filename):
         return response_error("HD Wallet not found", 404)
     except Exception as e:
         return response_error(f"Error signing message: {str(e)}")
+
+
+# ==================== ENDPOINTS DE QR CODES ====================
+
+@app.route('/api/qr/address/<address>')
+def qr_address(address):
+    """Generar QR de dirección"""
+    try:
+        size = request.args.get('size', 10, type=int)
+        border = request.args.get('border', 2, type=int)
+        
+        qr_image = QRGenerator.generate_address_qr(address, size, border)
+        
+        return response_success({
+            'address': address,
+            'qr_image': qr_image,
+            'format': 'base64'
+        })
+    except Exception as e:
+        return response_error(f"Error generating QR: {str(e)}")
+
+@app.route('/api/qr/payment', methods=['POST'])
+def qr_payment():
+    """Generar QR de pago"""
+    data = request.get_json()
+    
+    if not data or 'address' not in data:
+        return response_error("address required")
+    
+    try:
+        size = data.get('size', 10)
+        border = data.get('border', 2)
+        
+        qr_image = QRGenerator.generate_payment_qr(
+            address=data['address'],
+            amount=data.get('amount'),
+            memo=data.get('memo'),
+            size=size,
+            border=border
+        )
+        
+        # Generar URI
+        uri = f"colcript:{data['address']}"
+        params = []
+        if data.get('amount'):
+            params.append(f"amount={data['amount']}")
+        if data.get('memo'):
+            params.append(f"memo={data['memo']}")
+        if params:
+            uri += "?" + "&".join(params)
+        
+        return response_success({
+            'address': data['address'],
+            'amount': data.get('amount'),
+            'memo': data.get('memo'),
+            'uri': uri,
+            'qr_image': qr_image,
+            'format': 'base64'
+        })
+    except Exception as e:
+        return response_error(f"Error generating payment QR: {str(e)}")
+
+@app.route('/api/qr/parse', methods=['POST'])
+def qr_parse():
+    """Parsear URI de pago"""
+    data = request.get_json()
+    
+    if not data or 'uri' not in data:
+        return response_error("uri required")
+    
+    try:
+        parsed = QRGenerator.parse_payment_uri(data['uri'])
+        
+        return response_success({
+            'address': parsed['address'],
+            'amount': parsed['amount'],
+            'memo': parsed['memo']
+        })
+    except Exception as e:
+        return response_error(f"Error parsing URI: {str(e)}")
 
 # ==================== INICIO DEL SERVIDOR ====================
 
