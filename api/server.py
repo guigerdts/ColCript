@@ -7,7 +7,7 @@ from flask import send_from_directory
 import json
 
 # Obtener ruta absoluta del proyecto
-project_root = '/data/data/com.termux/files/home/ColCript'
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
@@ -23,8 +23,8 @@ from network.node import Node
 from mining.pool import MiningPool
 from blockchain.hd_wallet import HDWallet
 from utils.qr_generator import QRGenerator
+from utils.event_system import event_system, EventType
 import config
-
 app = Flask(__name__, 
             static_folder='../web',
             static_url_path='')
@@ -231,7 +231,15 @@ def docs():
             "POST /api/hdwallet/:file/sign": "Firmar mensaje (body: {message, index})",
             "GET /api/qr/address/:address": "Generar QR de dirección (query: size, border)",
             "POST /api/qr/payment": "Generar QR de pago (body: {address, amount?, memo?, size?, border?})",
-            "POST /api/qr/parse": "Parsear URI de pago (body: {uri})"
+            "POST /api/qr/parse": "Parsear URI de pago (body: {uri})",
+            "GET /api/events/history": "Historial de eventos (query: type, limit)",
+            "GET /api/events/types": "Tipos de eventos disponibles",
+            "GET /api/webhooks": "Lista de webhooks",
+            "POST /api/webhooks/add": "Agregar webhook (body: {event_type, url})",
+            "POST /api/webhooks/:id/remove": "Eliminar webhook",
+            "POST /api/webhooks/:id/enable": "Habilitar webhook",
+            "POST /api/webhooks/:id/disable": "Deshabilitar webhook",
+            "POST /api/notifications/test": "Emitir evento de prueba (body: {event_type?, data?})"
         }
     })
 
@@ -505,6 +513,15 @@ def mine_block():
     
     end_time = time.time()
     mining_time = end_time - start_time
+
+    # Emitir evento
+    event_system.emit(EventType.BLOCK_MINED, {
+        'block_index': block.index,
+        'hash': block.hash,
+        'miner': miner_address,
+        'reward': blockchain.mining_reward,
+        'transactions': len(block.transactions)
+    })
     
     return response_success({
         "block": {
@@ -1635,6 +1652,114 @@ def qr_parse():
         })
     except Exception as e:
         return response_error(f"Error parsing URI: {str(e)}")
+
+# ==================== ENDPOINTS DE NOTIFICACIONES ====================
+
+@app.route('/api/events/history')
+def events_history():
+    """Historial de eventos"""
+    event_type = request.args.get('type')
+    limit = request.args.get('limit', 50, type=int)
+    
+    history = event_system.get_history(event_type, limit)
+    
+    return response_success({
+        'count': len(history),
+        'events': history
+    })
+
+@app.route('/api/events/types')
+def events_types():
+    """Lista de tipos de eventos disponibles"""
+    types = [
+        {'type': EventType.TRANSACTION_CREATED, 'description': 'Nueva transacción creada'},
+        {'type': EventType.TRANSACTION_CONFIRMED, 'description': 'Transacción confirmada en bloque'},
+        {'type': EventType.BLOCK_MINED, 'description': 'Bloque minado'},
+        {'type': EventType.BLOCK_ADDED, 'description': 'Bloque agregado a la cadena'},
+        {'type': EventType.WALLET_CREATED, 'description': 'Wallet creada'},
+        {'type': EventType.WALLET_LOADED, 'description': 'Wallet cargada'},
+        {'type': EventType.FAUCET_CLAIMED, 'description': 'Faucet reclamado'},
+        {'type': EventType.CONTRACT_CREATED, 'description': 'Contrato creado'},
+        {'type': EventType.CONTRACT_EXECUTED, 'description': 'Contrato ejecutado'},
+        {'type': EventType.PEER_CONNECTED, 'description': 'Peer conectado'},
+        {'type': EventType.PEER_DISCONNECTED, 'description': 'Peer desconectado'},
+        {'type': EventType.POOL_BLOCK_MINED, 'description': 'Bloque minado por pool'},
+        {'type': EventType.POOL_MINER_JOINED, 'description': 'Minero se unió al pool'},
+    ]
+    
+    return response_success({
+        'count': len(types),
+        'types': types
+    })
+
+@app.route('/api/webhooks', methods=['GET'])
+def webhooks_list():
+    """Lista de webhooks registrados"""
+    webhooks = event_system.get_webhooks()
+    
+    return response_success({
+        'count': len(webhooks),
+        'webhooks': webhooks
+    })
+
+@app.route('/api/webhooks/add', methods=['POST'])
+def webhooks_add():
+    """Agregar webhook"""
+    data = request.get_json()
+    
+    if not data or 'event_type' not in data or 'url' not in data:
+        return response_error("event_type and url required")
+    
+    webhook_id = event_system.add_webhook(data['event_type'], data['url'])
+    
+    return response_success({
+        'webhook_id': webhook_id,
+        'event_type': data['event_type'],
+        'url': data['url']
+    }, "Webhook registered successfully")
+
+@app.route('/api/webhooks/<webhook_id>/remove', methods=['POST'])
+def webhooks_remove(webhook_id):
+    """Eliminar webhook"""
+    event_system.remove_webhook(webhook_id)
+    
+    return response_success({
+        'webhook_id': webhook_id
+    }, "Webhook removed")
+
+@app.route('/api/webhooks/<webhook_id>/enable', methods=['POST'])
+def webhooks_enable(webhook_id):
+    """Habilitar webhook"""
+    event_system.enable_webhook(webhook_id)
+    
+    return response_success({
+        'webhook_id': webhook_id,
+        'enabled': True
+    }, "Webhook enabled")
+
+@app.route('/api/webhooks/<webhook_id>/disable', methods=['POST'])
+def webhooks_disable(webhook_id):
+    """Deshabilitar webhook"""
+    event_system.disable_webhook(webhook_id)
+    
+    return response_success({
+        'webhook_id': webhook_id,
+        'enabled': False
+    }, "Webhook disabled")
+
+@app.route('/api/notifications/test', methods=['POST'])
+def notifications_test():
+    """Emitir evento de prueba"""
+    data = request.get_json() or {}
+    event_type = data.get('event_type', EventType.TRANSACTION_CREATED)
+    test_data = data.get('data', {'test': True, 'message': 'Test notification'})
+    
+    event_system.emit(event_type, test_data)
+    
+    return response_success({
+        'event_type': event_type,
+        'data': test_data
+    }, "Test event emitted")
 
 # ==================== INICIO DEL SERVIDOR ====================
 

@@ -1,0 +1,7 @@
+[
+  {
+    "event_type": "block_mined",
+    "url": "http://localhost:9999/webhook",
+    "enabled": true
+  }
+]
