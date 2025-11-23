@@ -1,0 +1,107 @@
+{
+  "version": "1.0",
+  "difficulty": 4,
+  "mining_reward": 50,
+  "timestamp": "2025-11-23T13:09:19.115188",
+  "blocks": [
+    {
+      "index": 0,
+      "timestamp": 1763921338.9198282,
+      "previous_hash": "0",
+      "miner_address": "GENESIS",
+      "nonce": 63817,
+      "hash": "0000160e2c658ffe1ef2a3a20773f11c09b7df8f88d9ebe69b576e181c39e924",
+      "transactions": [
+        {
+          "sender": "MINING",
+          "recipient": "GENESIS",
+          "amount": 0,
+          "timestamp": 1763921338.9198,
+          "signature": null
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "timestamp": 1763921346.3161864,
+      "previous_hash": "0000160e2c658ffe1ef2a3a20773f11c09b7df8f88d9ebe69b576e181c39e924",
+      "miner_address": "f72bae1086cba7b3b5ead1516f1093b5b8e4d9098a9d247d5c0f51282d92715ed9f72115c84159253b593c79b7b73e7074aebe4d49804b67480569adb29b0f32",
+      "nonce": 60215,
+      "hash": "0000d0975fbff87795ec016e248f9751d34ad697d53afc32b95f2b11b51efcd7",
+      "transactions": [
+        {
+          "sender": "MINING",
+          "recipient": "f72bae1086cba7b3b5ead1516f1093b5b8e4d9098a9d247d5c0f51282d92715ed9f72115c84159253b593c79b7b73e7074aebe4d49804b67480569adb29b0f32",
+          "amount": 50,
+          "timestamp": 1763921346.316124,
+          "signature": null
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "timestamp": 1763921353.53745,
+      "previous_hash": "0000d0975fbff87795ec016e248f9751d34ad697d53afc32b95f2b11b51efcd7",
+      "miner_address": "f72bae1086cba7b3b5ead1516f1093b5b8e4d9098a9d247d5c0f51282d92715ed9f72115c84159253b593c79b7b73e7074aebe4d49804b67480569adb29b0f32",
+      "nonce": 18528,
+      "hash": "0000f9f463cda82cc47d46a2393225b0ecee76be082ba09edcf0c37c6078fc70",
+      "transactions": [
+        {
+          "sender": "MINING",
+          "recipient": "f72bae1086cba7b3b5ead1516f1093b5b8e4d9098a9d247d5c0f51282d92715ed9f72115c84159253b593c79b7b73e7074aebe4d49804b67480569adb29b0f32",
+          "amount": 50,
+          "timestamp": 1763921353.5373979,
+          "signature": null
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "timestamp": 1763921355.9859278,
+      "previous_hash": "0000f9f463cda82cc47d46a2393225b0ecee76be082ba09edcf0c37c6078fc70",
+      "miner_address": "f72bae1086cba7b3b5ead1516f1093b5b8e4d9098a9d247d5c0f51282d92715ed9f72115c84159253b593c79b7b73e7074aebe4d49804b67480569adb29b0f32",
+      "nonce": 8508,
+      "hash": "0000eb8fd17cb05da0856b4c6fec58a19957367a2b0fb94e5330abb6cfa97b2a",
+      "transactions": [
+        {
+          "sender": "f72bae1086cba7b3b5ead1516f1093b5b8e4d9098a9d247d5c0f51282d92715ed9f72115c84159253b593c79b7b73e7074aebe4d49804b67480569adb29b0f32",
+          "recipient": "970013e67811a9c7ac9f8b4fb746e9f1ec80518c27bddad581e2401d9f78273a878951ca0bdb888e99e6998e6325412a978c9ecbb6decc45ef315e30aa6dc26d",
+          "amount": 20.0,
+          "timestamp": 1763921355.9698226,
+          "signature": "19e443eb834c68bd6b37d7c8cc5242b925a4da1fdf58ea0041ccf26f17d83d050479dc2e05e6fd9560a46e01e25b464d97a8f393b17b0cb578e18f7762abfcca"
+        },
+        {
+          "sender": "MINING",
+          "recipient": "f72bae1086cba7b3b5ead1516f1093b5b8e4d9098a9d247d5c0f51282d92715ed9f72115c84159253b593c79b7b73e7074aebe4d49804b67480569adb29b0f32",
+          "amount": 50.5,
+          "timestamp": 1763921355.9858265,
+          "signature": null
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "timestamp": 1763921357.407218,
+      "previous_hash": "0000eb8fd17cb05da0856b4c6fec58a19957367a2b0fb94e5330abb6cfa97b2a",
+      "miner_address": "f72bae1086cba7b3b5ead1516f1093b5b8e4d9098a9d247d5c0f51282d92715ed9f72115c84159253b593c79b7b73e7074aebe4d49804b67480569adb29b0f32",
+      "nonce": 10385,
+      "hash": "00005ae5bc5bc441f15300f8064a14e20f2c1ff27527ecaae26b2bc464271a6c",
+      "transactions": [
+        {
+          "sender": "970013e67811a9c7ac9f8b4fb746e9f1ec80518c27bddad581e2401d9f78273a878951ca0bdb888e99e6998e6325412a978c9ecbb6decc45ef315e30aa6dc26d",
+          "recipient": "04d10196b347a7ffff4488b86828d0e822aed5ab74263e77b269f46eeb49f9a9d0e0f5fbb545125ee82b65034871832b836fb696dc830fe99a4f2cd6f06cfa49",
+          "amount": 5.0,
+          "timestamp": 1763921357.3917665,
+          "signature": "c88db534488a3d96d444c222a450d87e08eba1ecabcd55fd1e67ffd130c1dbd4be899d0d3eb7574f9899b2215169ebc3c040849c917a9f5e4e50a5b288ad6c1d"
+        },
+        {
+          "sender": "MINING",
+          "recipient": "f72bae1086cba7b3b5ead1516f1093b5b8e4d9098a9d247d5c0f51282d92715ed9f72115c84159253b593c79b7b73e7074aebe4d49804b67480569adb29b0f32",
+          "amount": 50.5,
+          "timestamp": 1763921357.4071662,
+          "signature": null
+        }
+      ]
+    }
+  ]
+}

@@ -14,6 +14,7 @@ from blockchain.transaction import Transaction
 from blockchain.difficulty import DifficultyAdjustment
 import config
 from blockchain.storage import BlockchainStorage
+from utils.backup_system import BackupSystem
 
 class Blockchain:
     def __init__(self, auto_save=True, save_filename="colcript_main.json"):
@@ -25,6 +26,8 @@ class Blockchain:
         self.auto_save = auto_save
         self.save_filename = save_filename
         self.storage = BlockchainStorage()
+        self.backup_system = BackupSystem()
+        self.backup_interval = 5  # Hacer backup cada 5 bloques
     
         # Crear bloque génesis
         self.create_genesis_block()
@@ -104,6 +107,21 @@ class Blockchain:
             print(f"💎 Recompensa total: {total_reward} CLC (base: {self.mining_reward} + fees: {total_fees})")
         else:
             print(f"💎 Recompensa: {self.mining_reward} CLC (sin fees)")
+
+        # Guardar blockchain
+        if self.storage:
+            self.storage.save_blockchain(self, "colcript_main.json")
+    
+        # Backup automático cada N bloques
+        # POR QUÉ verificar hasattr: blockchain puede ser cargada sin backup_system
+        if hasattr(self, 'backup_system') and self.backup_system and len(self.chain) % self.backup_interval == 0:
+            import os
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            blockchain_file = os.path.join(project_root, 'data', 'colcript_main.json')
+        
+            if os.path.exists(blockchain_file):
+                self.backup_system.create_backup(blockchain_file, tag=f"block_{len(self.chain)}")
+                print(f"💾 Backup automático creado (bloque #{len(self.chain)})")
 
         print(f"✅ Bloque #{block.index} añadido a la cadena")
         return block

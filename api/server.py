@@ -26,6 +26,7 @@ from mining.pool import MiningPool
 from blockchain.hd_wallet import HDWallet
 from utils.qr_generator import QRGenerator
 from utils.event_system import event_system, EventType
+from utils.backup_system import BackupSystem
 import config
 
 app = Flask(__name__,
@@ -40,6 +41,9 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"],  # Límites globales
     storage_uri="memory://"  # Guardar en memoria (simple)
 )
+
+# Sistema de backups
+backup_system = BackupSystem()
 
 # Error handler para rate limit
 # POR QUÉ: Devolver JSON en lugar de HTML
@@ -269,17 +273,21 @@ def docs():
             "POST /api/webhooks/:id/enable": "Habilitar webhook",
             "POST /api/webhooks/:id/disable": "Deshabilitar webhook",
             "POST /api/notifications/test": "Emitir evento de prueba (body: {event_type?, data?})",
-            "GET /api/limits/status": "Ver límites de rate limiting actuales"
+            "GET /api/limits/status": "Ver límites de rate limiting actuales",
+            "POST /api/backup/create": "Crear backup manual (body: {tag?})",
+            "GET /api/backup/list": "Listar backups disponibles (query: pattern?)",
+            "POST /api/backup/restore": "Restaurar desde backup (body: {backup_file})",
+            "GET /api/backup/stats": "Estadísticas de backups"
         },
 
-        "rate_limits": {  # ← AGREGAR ESTO AQUÍ
+        "rate_limits": {
             "note": "All endpoints have rate limits to prevent abuse",
             "global": "200 per day, 50 per hour per IP",
             "transaction_send": "10 per minute",
             "mining": "5 per minute",
             "faucet_claim": "1 per hour",
             "status_code": "429 when limit exceeded"
-        }  # ← SIN COMA (es el último)
+        }
 
     })
 
@@ -1828,6 +1836,110 @@ def limits_status():
     except Exception as e:
         return response_error(f"Error: {str(e)}")
 
+# ==================== ENDPOINTS DE BACKUP ====================
+
+@app.route('/api/backup/create', methods=['POST'])
+@limiter.limit("5 per hour")  # Límite: 5 backups manuales por hora
+def create_backup():
+    """
+    Crear backup manual de blockchain
+    
+    POR QUÉ: Backup antes de operaciones críticas
+    """
+    try:
+        data = request.get_json() or {}
+        tag = data.get('tag', 'manual')
+        
+        # Ruta del archivo de blockchain
+        blockchain_file = os.path.join(project_root, 'data', 'colcript_main.json')
+        
+        if not os.path.exists(blockchain_file):
+            return response_error("Blockchain file not found")
+        
+        # Crear backup
+        backup_path = backup_system.create_backup(blockchain_file, tag=tag)
+        
+        if backup_path:
+            return response_success({
+                'backup_created': os.path.basename(backup_path),
+                'tag': tag,
+                'size_mb': round(os.path.getsize(backup_path) / (1024 * 1024), 2)
+            }, "Backup created successfully")
+        else:
+            return response_error("Failed to create backup")
+    
+    except Exception as e:
+        return response_error(f"Error: {str(e)}")
+
+@app.route('/api/backup/list')
+def list_backups():
+    """
+    Listar backups disponibles
+    
+    POR QUÉ: Ver puntos de restauración
+    """
+    try:
+        pattern = request.args.get('pattern', 'colcript_main')
+        backups = backup_system.list_backups(pattern)
+        
+        return response_success({
+            'count': len(backups),
+            'backups': backups
+        })
+    
+    except Exception as e:
+        return response_error(f"Error: {str(e)}")
+
+@app.route('/api/backup/restore', methods=['POST'])
+@limiter.limit("3 per hour")  # Muy restrictivo - operación crítica
+def restore_backup():
+    """
+    Restaurar blockchain desde backup
+    
+    POR QUÉ: Recuperación ante fallos
+    ADVERTENCIA: Operación crítica - crea backup del estado actual
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'backup_file' not in data:
+            return response_error("backup_file required")
+        
+        backup_file = data['backup_file']
+        blockchain_file = os.path.join(project_root, 'data', 'colcript_main.json')
+        
+        # Restaurar
+        success = backup_system.restore_backup(backup_file, blockchain_file)
+        
+        if success:
+            # Recargar blockchain
+            global blockchain
+            blockchain = storage.load_blockchain("colcript_main.json")
+            
+            return response_success({
+                'restored_from': backup_file,
+                'blocks': len(blockchain.chain) if blockchain else 0
+            }, "Blockchain restored successfully")
+        else:
+            return response_error("Failed to restore backup")
+    
+    except Exception as e:
+        return response_error(f"Error: {str(e)}")
+
+@app.route('/api/backup/stats')
+def backup_stats():
+    """
+    Estadísticas de backups
+    
+    POR QUÉ: Monitorear espacio y cantidad de backups
+    """
+    try:
+        stats = backup_system.get_backup_stats()
+        
+        return response_success(stats)
+    
+    except Exception as e:
+        return response_error(f"Error: {str(e)}")
 
 # ==================== INICIO DEL SERVIDOR ====================
 
