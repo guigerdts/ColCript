@@ -2,8 +2,10 @@
 
 import os
 import sys
-from flask import Flask, jsonify, request
 from flask import send_from_directory
+from flask import Flask, jsonify, request, send_from_directory
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import json
 
 # Obtener ruta absoluta del proyecto
@@ -25,9 +27,36 @@ from blockchain.hd_wallet import HDWallet
 from utils.qr_generator import QRGenerator
 from utils.event_system import event_system, EventType
 import config
-app = Flask(__name__, 
+
+app = Flask(__name__,
             static_folder='../web',
             static_url_path='')
+
+# Configurar Rate Limiter
+# POR QUÉ: Prevenir spam y ataques DDoS
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,  # Limitar por IP
+    default_limits=["200 per day", "50 per hour"],  # Límites globales
+    storage_uri="memory://"  # Guardar en memoria (simple)
+)
+
+# Error handler para rate limit
+# POR QUÉ: Devolver JSON en lugar de HTML
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    """
+    Maneja errores de rate limit (429)
+    
+    POR QUÉ: Mensajes JSON consistentes con el resto de la API
+    """
+    return jsonify({
+        "success": False,
+        "error": "Rate limit exceeded",
+        "message": str(e.description),
+        "retry_after": e.description
+    }), 429
+
 
 # Estado global
 blockchain = None
@@ -239,8 +268,19 @@ def docs():
             "POST /api/webhooks/:id/remove": "Eliminar webhook",
             "POST /api/webhooks/:id/enable": "Habilitar webhook",
             "POST /api/webhooks/:id/disable": "Deshabilitar webhook",
-            "POST /api/notifications/test": "Emitir evento de prueba (body: {event_type?, data?})"
-        }
+            "POST /api/notifications/test": "Emitir evento de prueba (body: {event_type?, data?})",
+            "GET /api/limits/status": "Ver límites de rate limiting actuales"
+        },
+
+        "rate_limits": {  # ← AGREGAR ESTO AQUÍ
+            "note": "All endpoints have rate limits to prevent abuse",
+            "global": "200 per day, 50 per hour per IP",
+            "transaction_send": "10 per minute",
+            "mining": "5 per minute",
+            "faucet_claim": "1 per hour",
+            "status_code": "429 when limit exceeded"
+        }  # ← SIN COMA (es el último)
+
     })
 
 @app.route('/api/info')
@@ -434,6 +474,7 @@ def wallet_history():
 # ==================== ENDPOINTS DE TRANSACCIONES ====================
 
 @app.route('/api/transaction/send', methods=['POST'])
+@limiter.limit("10 per minute")
 def send_transaction():
     """Envía una transacción"""
     if not current_wallet:
@@ -498,6 +539,7 @@ def pending_transactions():
 # ==================== ENDPOINTS DE MINERÍA ====================
 
 @app.route('/api/mining/mine', methods=['POST'])
+@limiter.limit("5 per minute")
 def mine_block():
     """Mina un nuevo bloque"""
     if not current_wallet:
@@ -663,6 +705,7 @@ def faucet_info():
     return response_success(faucet.get_faucet_info())
 
 @app.route('/api/faucet/claim', methods=['POST'])
+@limiter.limit("1 per hour")
 def faucet_claim():
     """Reclama del faucet"""
     if not current_wallet:
@@ -1760,6 +1803,31 @@ def notifications_test():
         'event_type': event_type,
         'data': test_data
     }, "Test event emitted")
+
+# ==================== RATE LIMIT INFO ====================
+
+@app.route('/api/limits/status')
+@limiter.exempt  # No aplicar límite a este endpoint
+def limits_status():
+    """Ver estado de rate limits"""
+    try:
+        # Información sobre límites configurados
+        return response_success({
+            'global_limits': {
+                'daily': '200 requests per day',
+                'hourly': '50 requests per hour'
+            },
+            'endpoint_limits': {
+                '/api/transaction/send': '10 per minute',
+                '/api/mining/mine': '5 per minute',
+                '/api/faucet/claim': '1 per hour'
+            },
+            'your_ip': get_remote_address(),
+            'note': 'Limits are per IP address'
+        })
+    except Exception as e:
+        return response_error(f"Error: {str(e)}")
+
 
 # ==================== INICIO DEL SERVIDOR ====================
 
