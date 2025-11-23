@@ -1,5 +1,10 @@
 # 🪙 ColCript (CLC)
 
+[![Tests](https://github.com/guigerdts/ColCript/actions/workflows/tests.yml/badge.svg)](https://github.com/guigerdts/ColCript/actions/workflows/tests.yml)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+
 **Una criptomoneda blockchain completa construida desde cero en Python**
 
 [![Versión](https://img.shields.io/badge/versión-1.0.0-blue.svg)](https://github.com/tu-usuario/colcript)

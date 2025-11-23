@@ -1,0 +1,47 @@
+# .github/workflows/tests.yml - CI/CD para ColCript
+
+name: Tests
+
+# Cuándo ejecutar:
+# - Cada push a main
+# - Cada pull request
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    # 1. Descargar código
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    # 2. Configurar Python
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    # 3. Instalar dependencias
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov
+    
+    # 4. Ejecutar tests
+    - name: Run tests with coverage
+      run: |
+        pytest tests/ -v --cov=blockchain --cov=wallet --cov=contracts --cov=mining --cov=network --cov=utils --cov-report=term-missing --cov-report=xml
+    
+    # 5. Subir coverage report (opcional)
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
