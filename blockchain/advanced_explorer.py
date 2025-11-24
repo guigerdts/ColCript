@@ -21,16 +21,16 @@ class AdvancedExplorer:
         self.blockchain = blockchain
     
     # === BÚSQUEDA AVANZADA ===
-    
-    def search_transaction(self, tx_hash: str) -> Optional[Dict]:
+    def search_transaction(self, tx_signature: str) -> Optional[Dict]:
         """
-        Buscar transacción por hash
-        
+        Buscar transacción por signature
+
         POR QUÉ: Encontrar transacciones específicas
         """
         for block in self.blockchain.chain:
             for tx in block.transactions:
-                if hasattr(tx, 'hash') and tx.hash == tx_hash:
+                # Buscar por signature (transacciones normales) 
+                if hasattr(tx, 'signature') and tx.signature == tx_signature:
                     return {
                         'transaction': tx.to_dict(),
                         'block': block.index,
@@ -38,8 +38,18 @@ class AdvancedExplorer:
                         'timestamp': block.timestamp,
                         'confirmations': len(self.blockchain.chain) - block.index
                     }
-        return None
-    
+                # También buscar transacciones de minería (sin signature)
+                tx_dict = tx.to_dict()
+                if tx_dict.get('sender') == 'MINING' and str(tx_dict) == tx_signature:
+                    return {
+                        'transaction': tx_dict,
+                        'block': block.index,
+                        'block_hash': block.hash,
+                        'timestamp': block.timestamp,
+                        'confirmations': len(self.blockchain.chain) - block.index
+                    }
+        return None 
+
     def search_address_transactions(self, address: str, limit: int = 100) -> List[Dict]:
         """
         Buscar todas las transacciones de una dirección

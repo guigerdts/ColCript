@@ -114,58 +114,67 @@ class AdvancedWallet:
         return None
     
     # === HISTORIAL ===
-    
     def get_transaction_history(self, limit: int = 100) -> List[Dict]:
         """Obtener historial completo de transacciones"""
         try:
-            # Obtener todas las transacciones de la blockchain
-            chain_response = requests.get(f"{self.node_url}/api/chain", timeout=5)
-            if chain_response.status_code != 200:
+            # Primero obtener info de cuántos bloques hay
+            info_response = requests.get(f"{self.node_url}/api/blockchain/info", timeout=5)
+            if info_response.status_code != 200:
                 return []
-            
-            chain_data = chain_response.json()
-            blocks = chain_data.get("data", {}).get("chain", [])
-            
+
+            info_data = info_response.json()
+            total_blocks = info_data.get("data", {}).get("bloques", 0)
+
             transactions = []
-            
-            for block in blocks:
-                block_time = block.get("timestamp", "")
-                block_index = block.get("index", 0)
+
+            # Iterar por cada bloque
+            for block_index in range(total_blocks):
+                block_response = requests.get(
+                    f"{self.node_url}/api/explorer/block/{block_index}", 
+                    timeout=5
+                )
                 
-                for tx in block.get("transactions", []):
-                    tx_hash = tx.get("hash", "")
+                if block_response.status_code != 200:
+                    continue
+
+                block_data = block_response.json()
+                block_info = block_data.get("data", {}).get("block", {})
+                block_txs = block_data.get("data", {}).get("transactions", [])
+                
+                block_time = block_info.get("timestamp", 0)
+                
+                for tx in block_txs:
                     sender = tx.get("sender", "")
                     recipient = tx.get("recipient", "")
                     amount = tx.get("amount", 0)
                     fee = tx.get("fee", 0)
-                    tx_type = tx.get("type", "transfer")
-                    
+                    signature = tx.get("signature", "")
+
                     # Solo incluir transacciones relacionadas con esta wallet
                     if sender == self.address or recipient == self.address:
                         direction = "sent" if sender == self.address else "received"
                         other_party = recipient if direction == "sent" else sender
-                        
+
                         transactions.append({
-                            "hash": tx_hash,
+                            "hash": signature or f"block_{block_index}_tx",
                             "block": block_index,
                             "timestamp": block_time,
                             "direction": direction,
                             "amount": amount,
                             "fee": fee if direction == "sent" else 0,
-                            "type": tx_type,
+                            "type": "mining" if sender == "MINING" else "transfer",
                             "from": sender,
                             "to": recipient,
                             "other_party": other_party,
-                            "other_party_label": self.get_label(other_party)
                         })
-            
-            # Ordenar por tiempo (más reciente primero)
-            transactions.sort(key=lambda x: x["timestamp"], reverse=True)
-            
-            return transactions[:limit]
-            
+
+                        if len(transactions) >= limit:
+                            return transactions[:limit]
+
+            return transactions
+
         except Exception as e:
-            print(f"❌ Error obteniendo historial: {e}")
+            print(f"Error getting transaction history: {e}")
             return []
     
     def get_transaction_stats(self) -> Dict:
@@ -190,12 +199,15 @@ class AdvancedWallet:
         }
     
     # === EXPORTAR ===
-    
+
     def export_to_json(self, filename: str = None) -> str:
         """Exportar historial a JSON"""
+        import tempfile
         if not filename:
-            filename = f"wallet_{self.address[:10]}_history_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        
+            # Usar directorio temporal del sistema
+            temp_dir = tempfile.gettempdir()
+            filename = os.path.join(temp_dir, f"wallet_{self.address[:10]}_history_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+
         history = self.get_transaction_history(limit=10000)
         stats = self.get_transaction_stats()
         
@@ -212,12 +224,14 @@ class AdvancedWallet:
             json.dump(export_data, f, indent=2)
         
         return filename
-    
     def export_to_csv(self, filename: str = None) -> str:
         """Exportar historial a CSV"""
+        import tempfile
         if not filename:
-            filename = f"wallet_{self.address[:10]}_history_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        
+            # Usar directorio temporal del sistema
+            temp_dir = tempfile.gettempdir()
+            filename = os.path.join(temp_dir, f"wallet_{self.address[:10]}_history_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+
         history = self.get_transaction_history(limit=10000)
         
         with open(filename, 'w', newline='') as f:

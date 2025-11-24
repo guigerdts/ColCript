@@ -198,6 +198,83 @@ class ColCriptAPI {
 // Instancia global de la API
 const api = new ColCriptAPI(API_BASE);
 
+// Agregar métodos Advanced después de crear la instancia
+api.getWalletContacts = async function(address) {
+    return this.request(`/wallet/advanced/contacts?address=${address}`);
+}.bind(api);
+
+api.addWalletContact = async function(address, name, contactAddress, notes = '') {
+    return this.request('/wallet/advanced/contacts', {
+        method: 'POST',
+        body: JSON.stringify({ address, name, contact_address: contactAddress, notes })
+    });
+}.bind(api);
+
+api.removeWalletContact = async function(address, name) {
+    return this.request('/wallet/advanced/contacts', {
+        method: 'DELETE',
+        body: JSON.stringify({ address, name })
+    });
+}.bind(api);
+
+api.getWalletLabels = async function(address) {
+    return this.request(`/wallet/advanced/labels?address=${address}`);
+}.bind(api);
+
+api.addWalletLabel = async function(address, labelAddress, label) {
+    return this.request('/wallet/advanced/labels', {
+        method: 'POST',
+        body: JSON.stringify({ address, label_address: labelAddress, label })
+    });
+}.bind(api);
+
+api.removeWalletLabel = async function(address, labelAddress) {
+    return this.request('/wallet/advanced/labels', {
+        method: 'DELETE',
+        body: JSON.stringify({ address, label_address: labelAddress })
+    });
+}.bind(api);
+
+api.getWalletAdvancedHistory = async function(address, limit = 20) {
+    return this.request(`/wallet/advanced/history/${address}?limit=${limit}`);
+}.bind(api);
+
+api.getWalletAdvancedStats = async function(address) {
+    return this.request(`/wallet/advanced/stats/${address}`);
+}.bind(api);
+
+api.searchTransaction = async function(txHash) {
+    return this.request(`/explorer/advanced/search/transaction/${txHash}`);
+}.bind(api);
+
+api.searchAddressTransactions = async function(address, limit = 100) {
+    return this.request(`/explorer/advanced/search/address/${address}?limit=${limit}`);
+}.bind(api);
+
+api.getTopHolders = async function(limit = 10) {
+    return this.request(`/explorer/advanced/top-holders?limit=${limit}`);
+}.bind(api);
+
+api.getMinerRanking = async function(limit = 10) {
+    return this.request(`/explorer/advanced/miner-ranking?limit=${limit}`);
+}.bind(api);
+
+api.getNetworkActivity = async function(days = 7) {
+    return this.request(`/explorer/advanced/network-activity?days=${days}`);
+}.bind(api);
+
+api.getRealtimeStats = async function() {
+    return this.request('/explorer/advanced/realtime');
+}.bind(api);
+
+api.getDifficultyHistory = async function(limit = 100) {
+    return this.request(`/explorer/advanced/difficulty-history?limit=${limit}`);
+}.bind(api);
+
+api.searchByDateRange = async function(startDate, endDate) {
+    return this.request(`/explorer/advanced/search/date-range?start=${startDate}&end=${endDate}`);
+}.bind(api);
+
 // ==================== HELPER FUNCTIONS ====================
 
 // Formatear dirección (mostrar solo inicio y final)

@@ -9,6 +9,80 @@ y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
 ## [1.0.0] - 2025-11-17
 
+## [1.3.0] - 2024-11-24
+
+### ✨ Agregado
+
+#### Advanced Wallet System
+- **Estadísticas detalladas de wallet**: Balance total, transacciones enviadas/recibidas, fees pagados, net flow
+- **Contact Management**: Sistema completo de gestión de contactos con direcciones y notas opcionales
+- **Address Labels**: Etiquetado de direcciones para mejor organización y seguimiento
+- **Transaction History Analysis**: Análisis detallado del historial con filtros por tipo
+- **Data Export**: Exportación completa de datos en formatos JSON y CSV
+- **Persistencia de datos**: Contactos y labels guardados en localStorage del navegador
+
+#### Advanced Explorer
+- **Real-Time Network Status**: Monitoreo de red en tiempo real con actualización automática
+- **Top Holders Analysis**: Ranking de wallets con mayor balance de CLC
+- **Miner Ranking**: Clasificación de mineros por número de bloques minados
+- **Network Activity Charts**: Visualización gráfica de actividad de la red
+- **Transaction Search**: Búsqueda avanzada de transacciones por hash
+- **Refresh Stats**: Actualización manual de estadísticas del explorador
+
+#### Nuevos Endpoints API
+- `GET /api/wallet/advanced/stats/<address>` - Obtener estadísticas completas de una wallet
+- `GET /api/wallet/advanced/history/<address>` - Obtener historial de transacciones paginado
+- `GET /api/wallet/advanced/export/<address>?format={json|csv}` - Exportar datos de wallet
+- `GET /api/wallet/advanced/contacts?address=<address>` - Listar contactos de una wallet
+- `POST /api/wallet/advanced/contacts` - Agregar/remover contactos
+- `GET /api/wallet/advanced/labels?address=<address>` - Listar labels de direcciones
+- `POST /api/wallet/advanced/labels` - Agregar/remover labels
+- `GET /api/explorer/stats/realtime` - Estadísticas de red en tiempo real
+- `GET /api/explorer/holders?limit=<n>` - Top holders (default: 10)
+- `GET /api/explorer/miners?limit=<n>` - Ranking de mineros (default: 10)
+- `GET /api/explorer/activity` - Actividad de la red (últimos 10 bloques)
+
+#### Módulos Nuevos
+- `wallet/advanced.py` - Sistema avanzado de gestión de wallets
+- `blockchain/advanced_explorer.py` - Explorador avanzado con analytics
+
+### 🔧 Mejorado
+- **Interfaz de usuario**: Nuevas páginas para Advanced Wallet y Advanced Explorer
+- **Sistema de exportación**: Compatible con PC, móvil y tablets
+- **Manejo de errores**: Validación robusta en todos los endpoints
+- **Experiencia de usuario**: Tooltips, mensajes informativos y feedback visual
+- **Performance**: Caché de estadísticas para consultas rápidas
+
+### 🐛 Corregido
+- Importación de `send_file` en `api/server.py`
+- Rutas de archivos temporales para exportación
+- Manejo de `API_URL` no definido en JavaScript
+- CORS y compatibilidad con navegadores móviles
+
+### 📚 Documentación
+- `ROADMAP.md` - Roadmap completo del proyecto
+- `CHANGELOG.md` - Actualizado con cambios de v1.3.0
+- `README.md` - Actualizado con nuevas features
+- Documentación de nuevos endpoints API
+
+### 📊 Estadísticas del Proyecto
+- **Líneas de código**: ~8,500+
+- **API Endpoints**: 48+
+- **Módulos**: 15+
+- **Features completadas**: 30+
+- **Cobertura de tests**: ~50% en módulos críticos
+
+---
+
+## [1.2.0] - 2024-11-XX
+
+### ✨ Agregado
+- Sistema completo de métricas y observabilidad
+- Dashboard de estadísticas en tiempo real
+- Monitoreo de rendimiento de red
+- Logs estructurados con niveles de severidad
+
+
 ## [1.1.0] - 2025-11-19
 
 ### ✨ Agregado
@@ -73,7 +147,7 @@ y este proyecto adhiere a [Versionado Semántico](https://semver.org/lang/es/).
 
 ### 📊 Especificaciones Actualizadas
 
-```yaml
+(yaml)
 Versión: 1.1.0
 API Port: 5000
 Dificultad Inicial: 4
@@ -215,7 +289,7 @@ Primera versión estable de ColCript con todas las funcionalidades core implemen
 
 ### 📊 Especificaciones
 
-```yaml
+(yaml)
 Versión: 1.0.0
 Lenguaje: Python 3.12+
 Supply Total: 21,000,000 CLC

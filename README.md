@@ -6,8 +6,7 @@
 
 
 **Una criptomoneda blockchain completa construida desde cero en Python**
-
-[![Versión](https://img.shields.io/badge/versión-1.0.0-blue.svg)](https://github.com/tu-usuario/colcript)
+[![Versión](https://img.shields.io/badge/versión-1.3.0-blue.svg)](https://github.com/tu-usuario/colcript)
 [![Python](https://img.shields.io/badge/python-3.12+-green.svg)](https://www.python.org/)
 [![Licencia](https://img.shields.io/badge/licencia-MIT-orange.svg)](LICENSE)
 
@@ -86,6 +85,21 @@ ColCript es una criptomoneda funcional con tecnología blockchain, construida co
 - Explorador de bloques
 - Smart Contracts UI
 - Red P2P management
+
+### 📊 Advanced Wallet (v1.3.0)
+- **Estadísticas detalladas** de wallet (balance, transacciones, fees, net flow)
+- **Contact Management** - Gestión de contactos con notas
+- **Address Labels** - Etiquetado de direcciones para organización
+- **Transaction History** - Análisis completo del historial
+- **Data Export** - Exportación a JSON y CSV
+
+### 🔍 Advanced Explorer (v1.3.0)
+- **Real-Time Network Status** - Estado de la red en vivo
+- **Top Holders Analysis** - Ranking de wallets
+- **Miner Ranking** - Top mineros por bloques
+- **Network Activity Charts** - Visualización de actividad
+- **Transaction Search** - Búsqueda avanzada
+
 
 ---
 

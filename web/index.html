@@ -55,6 +55,12 @@
                 <a href="#" class="nav-link" data-page="settings">
                     <span>⚙️</span> Ajustes
                 </a>
+                <a href="#" class="nav-link" data-page="advanced-wallet">
+                    <span>💎</span> Advanced Wallet
+                </a>
+                <a href="#" class="nav-link" data-page="advanced-explorer">
+                    <span>🔎</span> Advanced Explorer
+                </a>
             </div>
         </div>
     </nav>
@@ -263,7 +269,13 @@
 
                 <!-- Transaction History -->
                 <div class="section-card" id="transactionsSection" style="display: none;">
-                    <h3>📜 Transaction History</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>📜 Transaction History</h3>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-secondary" onclick="exportWalletData('json')">📥 Export JSON</button>
+                            <button class="btn btn-secondary" onclick="exportWalletData('csv')">📥 Export CSV</button>
+                        </div>
+                    </div>
                     <div id="transactionHistory">
                         <p class="loading">Load a wallet to see transactions</p>
                     </div>
@@ -591,6 +603,141 @@
                             Guardar Cambios
                         </button>
                     </div>
+                </div>  <!-- Cierra Settings -->
+            </div>
+            <!-- Advanced Wallet Page -->
+            <div class="page" id="advanced-wallet">
+                <h2 class="page-title">💎 Advanced Wallet</h2>
+
+                <!-- Wallet Address Input -->
+                <div class="section-card">
+                    <h3>Select Wallet</h3>
+                    <div class="form-group">
+                        <label>Wallet Address:</label>
+                        <input type="text" id="advancedWalletAddress" placeholder="Enter wallet address or load from current wallet">
+                        <div style="display: flex; gap: 1rem; margin-top: 0.5rem;">
+                            <button onclick="loadAdvancedWalletData()" class="btn btn-primary">Load Wallet Data</button>
+                            <button onclick="useCurrentWalletAddress()" class="btn btn-secondary">Use Current Wallet</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Wallet Stats -->
+                <div id="advancedWalletStats" class="stats-grid" style="display: none;">
+                    <!-- Stats will be populated here -->
+                </div>
+
+                <div class="section-card">
+                    <h3>📇 Contacts Management</h3>
+                    <div class="form-group">
+                        <label>Contact Name</label>
+                        <input type="text" id="contactName" placeholder="Alice">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Address</label>
+                        <input type="text" id="contactAddress" placeholder="0x123...">
+                    </div>
+                    <div class="form-group">
+                        <label>Notes (Optional)</label>
+                        <input type="text" id="contactNotes" placeholder="Friend, business partner, etc.">
+                    </div>
+                    <button onclick="addContact()" class="btn btn-success">Add Contact</button>
+                    
+                    <div id="contactsList" style="margin-top: 1rem;">
+                        <!-- Contacts will be listed here -->
+                    </div>
+                </div>
+
+                <div class="section-card">
+                    <h3>🏷️ Address Labels</h3>
+                    <div class="form-group">
+                        <label>Address</label>
+                        <input type="text" id="labelAddress" placeholder="0x456...">
+                    </div>
+                    <div class="form-group">
+                        <label>Label</label>
+                        <input type="text" id="labelText" placeholder="My Exchange, Cold Storage, etc.">
+                    </div>
+                    <button onclick="addLabel()" class="btn btn-success">Add Label</button>
+                    
+                    <div id="labelsList" style="margin-top: 1rem;">
+                        <!-- Labels will be listed here -->
+                    </div>
+                </div>
+                <div class="section-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>📊 Transaction History</h3>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn btn-secondary" onclick="exportWalletData('json')">📥 Export JSON</button>
+                            <button class="btn btn-secondary" onclick="exportWalletData('csv')">📥 Export CSV</button>
+                        </div>
+                    </div>
+                    <div id="advancedHistory">
+                </div>
+            </div>
+
+            <!-- Advanced Explorer Page -->
+            <div class="page" id="advanced-explorer">
+                <h2 class="page-title">🔎 Advanced Explorer</h2>
+
+                <!-- Realtime Stats -->
+                <div class="section-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>⚡ Real-Time Network Status</h3>
+                        <button class="btn btn-secondary" onclick="refreshRealtimeStats()">🔄 Refresh Stats</button>
+                    </div>
+                    <div id="realtimeStats" class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-content">
+                                <div class="stat-label">Chain Height</div>
+                                <div class="stat-value">TEST 123</div>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📝</div>
+                            <div class="stat-content">
+                                <div class="stat-label">Pending TX</div>
+                                <div class="stat-value">TEST 456</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Holders -->
+                <div class="section-card">
+                    <h3>👑 Top Holders</h3>
+                    <div id="topHoldersList">
+                        <!-- Top holders table will be here -->
+                    </div>
+                </div>
+
+                <!-- Miner Ranking -->
+                <div class="section-card">
+                    <h3>⛏️ Miner Ranking</h3>
+                    <div id="minerRankingList">
+                        <!-- Miner ranking table will be here -->
+                    </div>
+                </div>
+
+                <!-- Network Activity Chart -->
+                <div class="section-card">
+                    <h3>📈 Network Activity (Last 7 Days)</h3>
+                    <canvas id="networkActivityChart" height="100"></canvas>
+                </div>
+
+                <!-- Transaction Search -->
+                <div class="section-card">
+                    <h3>🔍 Search Transaction</h3>
+                    <div class="form-group">
+                        <label>Transaction Hash</label>
+                        <input type="text" id="searchTxHash" placeholder="Enter transaction hash">
+                    </div>
+                    <button onclick="searchTransaction()" class="btn btn-primary">Search</button>
+                    
+                    <div id="txSearchResult" style="margin-top: 1rem;">
+                        <!-- Search results will appear here -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -611,5 +758,11 @@
     <script src="js/api.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/main.js"></script>
+
+    <!-- Consola de depuración móvil -->
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
+
+
 </body>
 </html>

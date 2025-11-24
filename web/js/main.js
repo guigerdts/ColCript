@@ -41,16 +41,23 @@ function setupNavigation() {
             
             // Show corresponding page
             const pageId = link.dataset.page;
+            console.log('🔄 Navegando a página:', pageId);
             const page = document.getElementById(pageId);
+            console.log('📄 Elemento de página encontrado:', page);
             if (page) {
                 page.classList.add('active');
+                console.log('✅ Clase active agregada a:', pageId);
+                console.log('📊 Clases del elemento:', page.className);
                 
                 // Load page data
                 loadPageData(pageId);
+            } else {
+                console.error('❌ No se encontró el elemento con id:', pageId);
             }
         });
     });
 }
+
 
 function loadPageData(pageId) {
     switch(pageId) {
@@ -78,6 +85,15 @@ function loadPageData(pageId) {
         case 'settings':
             loadSettingsPage();
             break;
+        case 'advanced-wallet':
+            console.log('📱 Advanced Wallet page loaded - waiting for user input');
+            break;
+        case 'advanced-explorer':
+            console.log('📱 Loading Advanced Explorer...');
+            setTimeout(() => {
+                refreshRealtimeStats();
+            }, 100);
+            break;
     }
 }
 
@@ -104,31 +120,42 @@ async function checkConnection() {
 // ==================== DASHBOARD ====================
 
 async function loadDashboard() {
+    console.log('🔄 [1] Iniciando loadDashboard...');
     try {
         // Get dashboard data
+        console.log('🔄 [2] Llamando api.getDashboard()...');
         const dashboard = await api.getDashboard();
-        const blockchainInfo = await api.getBlockchainInfo();
-        const difficultyInfo = await api.getDifficultyInfo();
+        console.log('✅ [3] Dashboard recibido:', dashboard);
         
+        console.log('🔄 [4] Llamando api.getBlockchainInfo()...');
+        const blockchainInfo = await api.getBlockchainInfo();
+        console.log('✅ [5] BlockchainInfo recibido:', blockchainInfo);
+        
+        console.log('🔄 [6] Llamando api.getDifficultyInfo()...');
+        const difficultyInfo = await api.getDifficultyInfo();
+        console.log('✅ [7] DifficultyInfo recibido:', difficultyInfo);
+
         if (dashboard.success) {
+            console.log('✅ [8] Dashboard.success es true');
             const data = dashboard.data;
-            
+
             // Update stats
-            document.getElementById('circulating').textContent = 
+            console.log('🔄 [9] Actualizando stats...');
+            document.getElementById('circulating').textContent =
                 formatNumber(data.supply.circulating) + ' CLC';
-            
-            document.getElementById('totalBlocks').textContent = 
+
+            document.getElementById('totalBlocks').textContent =
                 data.network.total_blocks;
-            
-            document.getElementById('difficulty').textContent = 
+
+            document.getElementById('difficulty').textContent =
                 data.network.network_difficulty;
-            
+
             // Difficulty status
             const diffStatus = document.getElementById('difficultyStatus');
             if (difficultyInfo.success) {
                 const avgTime = difficultyInfo.data.current_avg_time;
                 const targetTime = difficultyInfo.data.target_block_time;
-                
+
                 if (avgTime > 0) {
                     if (avgTime < targetTime * 0.5) {
                         diffStatus.textContent = '⚡ Muy rápido';
@@ -145,14 +172,15 @@ async function loadDashboard() {
                     diffStatus.textContent = 'Calculando...';
                 }
             }
-            
+
+            console.log('🔄 [10] Actualizando wallet balance...');
             // Update wallet balance
             try {
                 const balance = await api.getWalletBalance();
                 if (balance.success) {
-                    document.getElementById('myBalance').textContent = 
+                    document.getElementById('myBalance').textContent =
                         formatNumber(balance.data.balance) + ' CLC';
-                    document.getElementById('walletStatus').textContent = 
+                    document.getElementById('walletStatus').textContent =
                         balance.data.wallet;
                     currentWallet = balance.data;
                 }
@@ -161,19 +189,27 @@ async function loadDashboard() {
                 document.getElementById('walletStatus').textContent = 'Sin wallet';
                 currentWallet = null;
             }
-            
+
+            console.log('🔄 [11] Llamando updateCharts()...');
             // Update charts
             updateCharts();
+            
+            console.log('🔄 [12] Llamando loadRecentBlocks()...');
+            // Load recent blocks
+            loadRecentBlocks();
+            
+            console.log('✅ [13] Dashboard cargado completamente');
+        } else {
+            console.error('❌ [ERROR] dashboard.success es false');
         }
-        
-        // Load recent blocks
-        loadRecentBlocks();
-        
+
     } catch (error) {
-        console.error('Error loading dashboard:', error);
+        console.error('❌ [ERROR EN CATCH] Error loading dashboard:', error);
+        console.error('❌ Stack:', error.stack);
         showToast('Error cargando dashboard', 'error');
     }
 }
+
 
 async function loadRecentBlocks() {
     const container = document.getElementById('recentBlocks');
@@ -2002,6 +2038,575 @@ function getCurrentWalletAddress() {
     return null;
 }
 
+// ==========================================
+// ADVANCED WALLET FUNCTIONS
+// ==========================================
+
+async function loadAdvancedWalletData() {
+    const address = document.getElementById('advancedWalletAddress').value;
+    if (!address) {
+        showToast('Please enter a wallet address', 'error');
+        return;
+    }
+
+    try {
+        // Load stats
+        const stats = await api.getWalletAdvancedStats(address);
+        displayAdvancedWalletStats(stats.data.statistics);
+
+        // Load contacts
+        const contacts = await api.getWalletContacts(address);
+        displayContacts(contacts.data.contacts);
+
+        // Load labels
+        const labels = await api.getWalletLabels(address);
+        displayLabels(labels.data.labels);
+
+        // Load history
+        const history = await api.getWalletAdvancedHistory(address, 20);
+        displayAdvancedHistory(history.data.transactions);
+
+        document.getElementById('advancedWalletStats').style.display = 'grid';
+        showToast('Wallet data loaded successfully', 'success');
+    } catch (error) {
+        showToast('Error loading wallet data: ' + error.message, 'error');
+    }
+}
+
+function useCurrentWalletAddress() {
+    if (currentWallet && currentWallet.address) {
+        document.getElementById('advancedWalletAddress').value = currentWallet.address;
+        loadAdvancedWalletData();
+    } else {
+        showToast('No wallet loaded. Please load a wallet first.', 'error');
+    }
+}
+
+function displayAdvancedWalletStats(stats) {
+    const container = document.getElementById('advancedWalletStats');
+    container.innerHTML = `
+        <div class="stat-card">
+            <div class="stat-value">${stats.total_transactions}</div>
+            <div class="stat-label">Total Transactions</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${stats.sent_count}</div>
+            <div class="stat-label">Sent</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${stats.received_count}</div>
+            <div class="stat-label">Received</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${stats.total_sent.toFixed(2)} CLC</div>
+            <div class="stat-label">Total Sent</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${stats.total_received.toFixed(2)} CLC</div>
+            <div class="stat-label">Total Received</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">${stats.total_fees.toFixed(2)} CLC</div>
+            <div class="stat-label">Total Fees</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value ${stats.net_flow >= 0 ? 'positive' : 'negative'}">
+                ${stats.net_flow.toFixed(2)} CLC
+            </div>
+            <div class="stat-label">Net Flow</div>
+        </div>
+    `;
+}
+
+async function addContact() {
+    const address = document.getElementById('advancedWalletAddress').value;
+    const name = document.getElementById('contactName').value;
+    const contactAddress = document.getElementById('contactAddress').value;
+    const notes = document.getElementById('contactNotes').value;
+
+    if (!address || !name || !contactAddress) {
+        showToast('Please fill all required fields', 'error');
+        return;
+    }
+
+    try {
+        await api.addWalletContact(address, name, contactAddress, notes);
+        showToast('Contact added successfully', 'success');
+        
+        document.getElementById('contactName').value = '';
+        document.getElementById('contactAddress').value = '';
+        document.getElementById('contactNotes').value = '';
+        
+        const contacts = await api.getWalletContacts(address);
+        displayContacts(contacts.data.contacts);
+    } catch (error) {
+        showToast('Error adding contact: ' + error.message, 'error');
+    }
+}
+
+function displayContacts(contacts) {
+    const container = document.getElementById('contactsList');
+    
+    if (Object.keys(contacts).length === 0) {
+        container.innerHTML = '<p class="empty-message">No contacts yet</p>';
+        return;
+    }
+
+    container.innerHTML = Object.entries(contacts).map(([name, info]) => `
+        <div class="list-item">
+            <div>
+                <strong>👤 ${name}</strong>
+                <small>${info.address}</small>
+                ${info.notes ? `<em>${info.notes}</em>` : ''}
+            </div>
+            <button onclick="removeContact('${name}')" class="btn btn-danger btn-sm">Remove</button>
+        </div>
+    `).join('');
+}
+
+async function removeContact(name) {
+    const address = document.getElementById('advancedWalletAddress').value;
+    
+    if (!confirm(`Remove contact "${name}"?`)) return;
+
+    try {
+        await api.removeWalletContact(address, name);
+        showToast('Contact removed', 'success');
+        
+        const contacts = await api.getWalletContacts(address);
+        displayContacts(contacts.data.contacts);
+    } catch (error) {
+        showToast('Error removing contact: ' + error.message, 'error');
+    }
+}
+
+async function addLabel() {
+    const walletAddress = document.getElementById('advancedWalletAddress').value;
+    const address = document.getElementById('labelAddress').value;
+    const label = document.getElementById('labelText').value;
+
+    if (!walletAddress || !address || !label) {
+        showToast('Please fill all fields', 'error');
+        return;
+    }
+
+    try {
+        await api.addWalletLabel(walletAddress, address, label);
+        showToast('Label added successfully', 'success');
+        
+        document.getElementById('labelAddress').value = '';
+        document.getElementById('labelText').value = '';
+        
+        const labels = await api.getWalletLabels(walletAddress);
+        displayLabels(labels.data.labels);
+    } catch (error) {
+        showToast('Error adding label: ' + error.message, 'error');
+    }
+}
+
+function displayLabels(labels) {
+    const container = document.getElementById('labelsList');
+    
+    if (Object.keys(labels).length === 0) {
+        container.innerHTML = '<p class="empty-message">No labels yet</p>';
+        return;
+    }
+
+    container.innerHTML = Object.entries(labels).map(([address, label]) => `
+        <div class="list-item">
+            <div>
+                <strong>🏷️ ${label}</strong>
+                <small>${address}</small>
+            </div>
+            <button onclick="removeLabel('${address}')" class="btn btn-danger btn-sm">Remove</button>
+        </div>
+    `).join('');
+}
+
+async function removeLabel(address) {
+    const walletAddress = document.getElementById('advancedWalletAddress').value;
+    
+    if (!confirm('Remove this label?')) return;
+
+    try {
+        await api.removeWalletLabel(walletAddress, address);
+        showToast('Label removed', 'success');
+        
+        const labels = await api.getWalletLabels(walletAddress);
+        displayLabels(labels.data.labels);
+    } catch (error) {
+        showToast('Error removing label: ' + error.message, 'error');
+    }
+}
+
+function displayAdvancedHistory(transactions) {
+    const container = document.getElementById('advancedHistory');
+    
+    if (transactions.length === 0) {
+        container.innerHTML = '<p class="empty-message">No transactions yet</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>From/To</th>
+                        <th>Label</th>
+                        <th>Block</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${transactions.map(tx => `
+                        <tr>
+                            <td><span class="badge ${tx.direction === 'sent' ? 'badge-danger' : 'badge-success'}">
+                                ${tx.direction === 'sent' ? '📤 Sent' : '📥 Received'}
+                            </span></td>
+                            <td>${tx.amount.toFixed(2)} CLC</td>
+                            <td><code>${tx.other_party.substring(0, 16)}...</code></td>
+                            <td>${tx.other_party_label || '-'}</td>
+                            <td>#${tx.block}</td>
+                            <td>${new Date(tx.timestamp).toLocaleString()}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+// ==========================================
+// ADVANCED EXPLORER FUNCTIONS
+// ==========================================
+
+async function refreshRealtimeStats() {
+    try {
+        const stats = await api.getRealtimeStats();
+        displayRealtimeStats(stats.data);
+
+        await loadTopHolders();
+        await loadMinerRanking();
+        await loadNetworkActivity();
+
+        showToast('Stats refreshed', 'success');
+    } catch (error) {
+        showToast('Error refreshing stats: ' + error.message, 'error');
+    }
+}
+
+function displayRealtimeStats(stats) {
+    console.log('📊 displayRealtimeStats llamada con:', stats);
+    const container = document.getElementById('realtimeStats');
+    
+    if (!container) {
+        console.error('❌ No se encontró el elemento realtimeStats');
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="stat-card">
+            <div class="stat-icon">📊</div>
+            <div class="stat-content">
+                <div class="stat-label">Chain Height</div>
+                <div class="stat-value">${stats.chain_height}</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">📝</div>
+            <div class="stat-content">
+                <div class="stat-label">Pending TX</div>
+                <div class="stat-value">${stats.pending_transactions}</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⚙️</div>
+            <div class="stat-content">
+                <div class="stat-label">Difficulty</div>
+                <div class="stat-value">${stats.current_difficulty}</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⏱️</div>
+            <div class="stat-content">
+                <div class="stat-label">Avg Block Time</div>
+                <div class="stat-value">${stats.average_block_time.toFixed(2)}s</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🕐</div>
+            <div class="stat-content">
+                <div class="stat-label">Last Activity</div>
+                <div class="stat-value">${stats.last_activity_seconds_ago.toFixed(0)}s ago</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">🔗</div>
+            <div class="stat-content">
+                <div class="stat-label">Last Block</div>
+                <div class="stat-value">#${stats.last_block.index}</div>
+            </div>
+        </div>
+    `;
+    console.log('✅ HTML insertado con estructura correcta');
+}
+
+async function loadTopHolders() {
+    try {
+        const response = await api.getTopHolders(10);
+        displayTopHolders(response.data.holders);
+    } catch (error) {
+        console.error('Error loading top holders:', error);
+    }
+}
+
+function displayTopHolders(holders) {
+    const container = document.getElementById('topHoldersList');
+    
+    if (holders.length === 0) {
+        container.innerHTML = '<p class="empty-message">No data yet</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Address</th>
+                        <th>Balance</th>
+                        <th>% of Supply</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${holders.map(holder => `
+                        <tr>
+                            <td><strong>#${holder.rank}</strong></td>
+                            <td><code>${holder.address.substring(0, 20)}...</code></td>
+                            <td>${holder.balance.toFixed(2)} CLC</td>
+                            <td>${holder.percentage.toFixed(2)}%</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+async function loadMinerRanking() {
+    try {
+        const response = await api.getMinerRanking(10);
+        displayMinerRanking(response.data.ranking);
+    } catch (error) {
+        console.error('Error loading miner ranking:', error);
+    }
+}
+
+function displayMinerRanking(ranking) {
+    const container = document.getElementById('minerRankingList');
+    
+    if (ranking.length === 0) {
+        container.innerHTML = '<p class="empty-message">No miners yet</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Miner</th>
+                        <th>Blocks</th>
+                        <th>Rewards</th>
+                        <th>%</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${ranking.map(miner => `
+                        <tr>
+                            <td><strong>#${miner.rank}</strong></td>
+                            <td><code>${miner.address.substring(0, 20)}...</code></td>
+                            <td>${miner.blocks_mined}</td>
+                            <td>${miner.total_rewards} CLC</td>
+                            <td>${miner.percentage.toFixed(2)}%</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+async function loadNetworkActivity() {
+    try {
+        const response = await api.getNetworkActivity(7);
+        displayNetworkActivityChart(response.data);
+    } catch (error) {
+        console.error('Error loading network activity:', error);
+    }
+}
+
+function displayNetworkActivityChart(activity) {
+    const ctx = document.getElementById('networkActivityChart');
+    if (!ctx) return;
+
+    const days = Object.keys(activity.transactions_per_day).sort();
+    const txData = days.map(day => activity.transactions_per_day[day] || 0);
+    const blockData = days.map(day => activity.blocks_per_day[day] || 0);
+
+    if (window.networkChart) {
+        window.networkChart.destroy();
+    }
+
+    window.networkChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: days,
+            datasets: [
+                {
+                    label: 'Transactions',
+                    data: txData,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4
+                },
+                {
+                    label: 'Blocks',
+                    data: blockData,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: {
+                        color: '#e2e8f0'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { color: '#94a3b8' },
+                    grid: { color: '#334155' }
+                },
+                x: {
+                    ticks: { color: '#94a3b8' },
+                    grid: { color: '#334155' }
+                }
+            }
+        }
+    });
+}
+
+async function searchTransaction() {
+    const txHash = document.getElementById('searchTxHash').value;
+    if (!txHash) {
+        showToast('Please enter a transaction hash', 'error');
+        return;
+    }
+
+    try {
+        const result = await api.searchTransaction(txHash);
+        displayTransactionSearchResult(result.data);
+    } catch (error) {
+        document.getElementById('txSearchResult').innerHTML = `
+            <div class="alert alert-error">Transaction not found</div>
+        `;
+    }
+}
+
+function displayTransactionSearchResult(tx) {
+    const container = document.getElementById('txSearchResult');
+    container.innerHTML = `
+        <div class="section-card" style="margin-top: 1rem;">
+            <h4>✅ Transaction Found</h4>
+            <table class="info-table">
+                <tr><td><strong>Signature:</strong></td><td><code>${tx.transaction.signature || 'N/A'}</code></td></tr>
+                <tr><td><strong>Block:</strong></td><td>#${tx.block}</td></tr>
+                <tr><td><strong>From:</strong></td><td><code>${tx.transaction.sender}</code></td></tr>
+                <tr><td><strong>To:</strong></td><td><code>${tx.transaction.recipient}</code></td></tr>
+                <tr><td><strong>Amount:</strong></td><td>${tx.transaction.amount} CLC</td></tr>
+                <tr><td><strong>Fee:</strong></td><td>${tx.transaction.fee} CLC</td></tr>
+                <tr><td><strong>Confirmations:</strong></td><td>${tx.confirmations}</td></tr>
+                <tr><td><strong>Timestamp:</strong></td><td>${new Date(tx.timestamp * 1000).toLocaleString()}</td></tr>
+            </table>
+        </div>
+    `;
+}
+
+// Refresh Real-Time Stats
+async function refreshRealtimeStats() {
+    try {
+        const response = await api.getRealtimeStats();
+        if (response.success) {
+            displayRealtimeStats(response.data);
+            showToast('Stats refreshed successfully!', 'success');
+        }
+    } catch (error) {
+        console.error('Error refreshing stats:', error);
+        showToast('Error refreshing stats', 'error');
+    }
+}
+
+// Export Wallet Data
+
+// Export Wallet Data
+async function exportWalletData(format) {
+    const address = document.getElementById('advancedWalletAddress').value;
+    if (!address) {
+        showToast('Please load a wallet first', 'error');
+        return;
+    }
+
+    try {
+        const url = `/api/wallet/advanced/export/${address}?format=${format}`;
+
+        // Fetch del archivo
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Obtener el blob
+        const blob = await response.blob();
+        
+        // Crear URL del blob
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        // Crear elemento <a> temporal
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = blobUrl;
+        a.download = `wallet_${address.substring(0, 10)}_${Date.now()}.${format}`;
+        
+        // Agregar al DOM, hacer click y remover
+        document.body.appendChild(a);
+        a.click();
+        
+        // Limpiar
+        setTimeout(() => {
+            window.URL.revokeObjectURL(blobUrl);
+            document.body.removeChild(a);
+        }, 100);
+        
+        showToast(`Downloading ${format.toUpperCase()} file...`, 'success');
+    } catch (error) {
+        console.error('Error exporting data:', error);
+        showToast('Error exporting data', 'error');
+    }
+}
+
 // ==================== EXPORT FUNCTIONS ====================
 
 window.createWallet = createWallet;
@@ -2014,3 +2619,16 @@ window.claimFaucet = claimFaucet;
 window.setDifficulty = setDifficulty;
 window.toggleAutoAdjust = toggleAutoAdjust;
 window.showToast = showToast;
+// Advanced Wallet exports
+window.loadAdvancedWalletData = loadAdvancedWalletData;
+window.useCurrentWalletAddress = useCurrentWalletAddress;
+window.addContact = addContact;
+window.removeContact = removeContact;
+window.addLabel = addLabel;
+window.removeLabel = removeLabel;
+window.exportWalletData = exportWalletData;
+
+// Advanced Explorer exports
+window.refreshRealtimeStats = refreshRealtimeStats;
+window.searchTransaction = searchTransaction;
+window.refreshRealtimeStats = refreshRealtimeStats;
