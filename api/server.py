@@ -2037,6 +2037,183 @@ def metrics_reset():
     except Exception as e:
         return response_error(f"Error: {str(e)}")
 
+# ==========================================
+# ADVANCED WALLET ENDPOINTS
+# ==========================================
+
+@app.route('/api/wallet/advanced/contacts', methods=['GET', 'POST', 'DELETE'])
+def wallet_contacts():
+    """
+    Gestionar contactos de wallet
+    GET: Listar todos los contactos
+    POST: Agregar contacto nuevo
+    DELETE: Eliminar contacto
+    """
+    from wallet.advanced import AdvancedWallet
+    
+    address = request.args.get('address') or request.json.get('address')
+    if not address:
+        return jsonify({"success": False, "error": "Address required"}), 400
+    
+    wallet = AdvancedWallet(address)
+    
+    if request.method == 'GET':
+        contacts = wallet.list_contacts()
+        return jsonify({
+            "success": True,
+            "data": {
+                "address": address,
+                "contacts": contacts,
+                "total": len(contacts)
+            }
+        })
+    
+    elif request.method == 'POST':
+        data = request.json
+        name = data.get('name')
+        contact_address = data.get('contact_address')
+        notes = data.get('notes', '')
+        
+        if not name or not contact_address:
+            return jsonify({"success": False, "error": "Name and contact_address required"}), 400
+        
+        wallet.add_contact(name, contact_address, notes)
+        return jsonify({
+            "success": True,
+            "message": f"Contact '{name}' added",
+            "data": wallet.get_contact(name)
+        })
+    
+    elif request.method == 'DELETE':
+        data = request.json
+        name = data.get('name')
+        
+        if not name:
+            return jsonify({"success": False, "error": "Name required"}), 400
+        
+        if wallet.remove_contact(name):
+            return jsonify({"success": True, "message": f"Contact '{name}' removed"})
+        else:
+            return jsonify({"success": False, "error": "Contact not found"}), 404
+
+@app.route('/api/wallet/advanced/labels', methods=['GET', 'POST', 'DELETE'])
+def wallet_labels():
+    """
+    Gestionar etiquetas de direcciones
+    GET: Listar todas las etiquetas
+    POST: Agregar etiqueta
+    DELETE: Eliminar etiqueta
+    """
+    from wallet.advanced import AdvancedWallet
+    
+    wallet_address = request.args.get('address') or request.json.get('address')
+    if not wallet_address:
+        return jsonify({"success": False, "error": "Wallet address required"}), 400
+    
+    wallet = AdvancedWallet(wallet_address)
+    
+    if request.method == 'GET':
+        labels = wallet.labels
+        return jsonify({
+            "success": True,
+            "data": {
+                "wallet": wallet_address,
+                "labels": labels,
+                "total": len(labels)
+            }
+        })
+    
+    elif request.method == 'POST':
+        data = request.json
+        address = data.get('label_address')
+        label = data.get('label')
+        
+        if not address or not label:
+            return jsonify({"success": False, "error": "label_address and label required"}), 400
+        
+        wallet.add_label(address, label)
+        return jsonify({
+            "success": True,
+            "message": "Label added",
+            "data": {"address": address, "label": label}
+        })
+    
+    elif request.method == 'DELETE':
+        data = request.json
+        address = data.get('label_address')
+        
+        if not address:
+            return jsonify({"success": False, "error": "label_address required"}), 400
+        
+        if wallet.remove_label(address):
+            return jsonify({"success": True, "message": "Label removed"})
+        else:
+            return jsonify({"success": False, "error": "Label not found"}), 404
+
+@app.route('/api/wallet/advanced/history/<address>', methods=['GET'])
+def wallet_advanced_history(address):
+    """Obtener historial de transacciones con labels"""
+    from wallet.advanced import AdvancedWallet
+    
+    limit = request.args.get('limit', 20, type=int)
+    
+    wallet = AdvancedWallet(address)
+    history = wallet.get_transaction_history(limit=limit)
+    
+    return jsonify({
+        "success": True,
+        "data": {
+            "address": address,
+            "transactions": history,
+            "count": len(history)
+        }
+    })
+
+@app.route('/api/wallet/advanced/stats/<address>', methods=['GET'])
+def wallet_advanced_stats(address):
+    """Obtener estadísticas de transacciones"""
+    from wallet.advanced import AdvancedWallet
+    
+    wallet = AdvancedWallet(address)
+    stats = wallet.get_transaction_stats()
+    
+    return jsonify({
+        "success": True,
+        "data": {
+            "address": address,
+            "statistics": stats
+        }
+    })
+
+@app.route('/api/wallet/advanced/export/<address>', methods=['GET'])
+def wallet_advanced_export(address):
+    """Exportar historial completo"""
+    from wallet.advanced import AdvancedWallet
+    import os
+    
+    format_type = request.args.get('format', 'json')
+    
+    wallet = AdvancedWallet(address)
+    
+    if format_type == 'json':
+        filename = wallet.export_to_json()
+        mimetype = 'application/json'
+    elif format_type == 'csv':
+        filename = wallet.export_to_csv()
+        mimetype = 'text/csv'
+    else:
+        return jsonify({"success": False, "error": "Invalid format. Use 'json' or 'csv'"}), 400
+    
+    try:
+        return send_file(
+            filename,
+            mimetype=mimetype,
+            as_attachment=True,
+            download_name=os.path.basename(filename)
+        )
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 # ==================== INICIO DEL SERVIDOR ====================
 
