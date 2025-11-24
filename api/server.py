@@ -2214,6 +2214,141 @@ def wallet_advanced_export(address):
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+# ==========================================
+# ADVANCED EXPLORER ENDPOINTS
+# ==========================================
+
+@app.route('/api/explorer/advanced/search/transaction/<tx_hash>')
+def explorer_search_transaction(tx_hash):
+    """Buscar transacción por hash"""
+    from blockchain.advanced_explorer import AdvancedExplorer
+    
+    init_blockchain()
+    explorer = AdvancedExplorer(blockchain)
+    
+    result = explorer.search_transaction(tx_hash)
+    
+    if result:
+        return response_success(result)
+    else:
+        return response_error("Transaction not found", 404)
+
+@app.route('/api/explorer/advanced/search/address/<address>')
+def explorer_search_address(address):
+    """Buscar transacciones de una dirección"""
+    from blockchain.advanced_explorer import AdvancedExplorer
+    
+    init_blockchain()
+    explorer = AdvancedExplorer(blockchain)
+    
+    limit = request.args.get('limit', 100, type=int)
+    transactions = explorer.search_address_transactions(address, limit=limit)
+    
+    return response_success({
+        'address': address,
+        'transactions': transactions,
+        'count': len(transactions)
+    })
+
+@app.route('/api/explorer/advanced/top-holders')
+def explorer_top_holders():
+    """Top holders por balance"""
+    from blockchain.advanced_explorer import AdvancedExplorer
+    
+    init_blockchain()
+    explorer = AdvancedExplorer(blockchain)
+    
+    limit = request.args.get('limit', 10, type=int)
+    holders = explorer.get_top_holders(limit=limit)
+    
+    return response_success({
+        'holders': holders,
+        'count': len(holders)
+    })
+
+@app.route('/api/explorer/advanced/miner-ranking')
+def explorer_miner_ranking():
+    """Ranking de mineros"""
+    from blockchain.advanced_explorer import AdvancedExplorer
+    
+    init_blockchain()
+    explorer = AdvancedExplorer(blockchain)
+    
+    limit = request.args.get('limit', 10, type=int)
+    ranking = explorer.get_miner_ranking(limit=limit)
+    
+    return response_success({
+        'ranking': ranking,
+        'count': len(ranking)
+    })
+
+@app.route('/api/explorer/advanced/network-activity')
+def explorer_network_activity():
+    """Actividad de red en últimos N días"""
+    from blockchain.advanced_explorer import AdvancedExplorer
+    
+    init_blockchain()
+    explorer = AdvancedExplorer(blockchain)
+    
+    days = request.args.get('days', 7, type=int)
+    activity = explorer.get_network_activity(days=days)
+    
+    return response_success(activity)
+
+@app.route('/api/explorer/advanced/realtime')
+def explorer_realtime():
+    """Estadísticas en tiempo real"""
+    from blockchain.advanced_explorer import AdvancedExplorer
+    
+    init_blockchain()
+    explorer = AdvancedExplorer(blockchain)
+    
+    stats = explorer.get_realtime_stats()
+    
+    return response_success(stats)
+
+@app.route('/api/explorer/advanced/difficulty-history')
+def explorer_difficulty_history():
+    """Historial de dificultad"""
+    from blockchain.advanced_explorer import AdvancedExplorer
+    
+    init_blockchain()
+    explorer = AdvancedExplorer(blockchain)
+    
+    limit = request.args.get('limit', 100, type=int)
+    history = explorer.get_difficulty_history(limit=limit)
+    
+    return response_success({
+        'history': history,
+        'count': len(history)
+    })
+
+@app.route('/api/explorer/advanced/search/date-range')
+def explorer_search_date_range():
+    """Buscar bloques por rango de fechas"""
+    from blockchain.advanced_explorer import AdvancedExplorer
+    
+    init_blockchain()
+    explorer = AdvancedExplorer(blockchain)
+    
+    start_date = request.args.get('start')
+    end_date = request.args.get('end')
+    
+    if not start_date or not end_date:
+        return response_error("start and end parameters required")
+    
+    try:
+        results = explorer.search_by_date_range(start_date, end_date)
+        return response_success({
+            'start_date': start_date,
+            'end_date': end_date,
+            'blocks': results,
+            'count': len(results)
+        })
+    except Exception as e:
+        return response_error(f"Invalid date format: {str(e)}")
+
+
 
 # ==================== INICIO DEL SERVIDOR ====================
 
