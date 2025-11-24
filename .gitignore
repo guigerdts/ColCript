@@ -25,3 +25,17 @@ config.local.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Coverage reports
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Test data temporales
+wallet/wallet_test_*
+data/test_*
+data/*_test.json
+
+# Backups
+*.bak
+backups/*.bak

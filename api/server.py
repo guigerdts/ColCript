@@ -2,6 +2,7 @@
 
 import os
 import sys
+import time
 from flask import send_from_directory
 from flask import Flask, jsonify, request, send_from_directory
 from flask_limiter import Limiter
@@ -27,11 +28,37 @@ from blockchain.hd_wallet import HDWallet
 from utils.qr_generator import QRGenerator
 from utils.event_system import event_system, EventType
 from utils.backup_system import BackupSystem
+from utils.metrics import metrics
 import config
 
 app = Flask(__name__,
             static_folder='../web',
             static_url_path='')
+
+# Middleware para registrar métricas
+# POR QUÉ: Rastrear todas las requests automáticamente
+@app.before_request
+def before_request():
+    """Registra inicio de request"""
+    from flask import g
+    g.start_time = time.time()
+
+@app.after_request
+def after_request(response):
+    """Registra métricas de request"""
+    from flask import g, request
+    
+    try:
+        if hasattr(g, 'start_time'):
+            duration = time.time() - g.start_time
+            success = response.status_code < 400
+            
+            # Registrar en métricas
+            metrics.record_request(request.path, duration, success)
+    except:
+        pass  # No romper si falla el logging
+
+    return response
 
 # Configurar Rate Limiter
 # POR QUÉ: Prevenir spam y ataques DDoS
@@ -277,7 +304,11 @@ def docs():
             "POST /api/backup/create": "Crear backup manual (body: {tag?})",
             "GET /api/backup/list": "Listar backups disponibles (query: pattern?)",
             "POST /api/backup/restore": "Restaurar desde backup (body: {backup_file})",
-            "GET /api/backup/stats": "Estadísticas de backups"
+            "GET /api/backup/stats": "Estadísticas de backups",
+            "GET /api/metrics/system": "Métricas del sistema (CPU, RAM, disco)",
+            "GET /api/metrics/api": "Métricas de la API (requests, errors, uptime)",
+            "GET /api/health": "Health check del servidor",
+            "POST /api/metrics/reset": "Reiniciar métricas (1/hour)"
         },
 
         "rate_limits": {
@@ -1940,6 +1971,72 @@ def backup_stats():
     
     except Exception as e:
         return response_error(f"Error: {str(e)}")
+
+# ==================== ENDPOINTS DE MONITOREO ====================
+
+@app.route('/api/metrics/system')
+def metrics_system():
+    """
+    Métricas del sistema
+    
+    POR QUÉ: Monitorear CPU, RAM, disco
+    """
+    try:
+        system_metrics = metrics.get_system_metrics()
+        return response_success(system_metrics)
+    except Exception as e:
+        return response_error(f"Error: {str(e)}")
+
+@app.route('/api/metrics/api')
+def metrics_api():
+    """
+    Métricas de la API
+    
+    POR QUÉ: Ver uso de endpoints y performance
+    """
+    try:
+        api_metrics = metrics.get_api_metrics()
+        return response_success(api_metrics)
+    except Exception as e:
+        return response_error(f"Error: {str(e)}")
+
+@app.route('/api/health')
+def health_check():
+    """
+    Health check del servidor
+    
+    POR QUÉ: Verificar que el servidor está funcionando
+    """
+    try:
+        health = metrics.get_health_status()
+        
+        # Retornar código HTTP según estado
+        status_code = 200 if health['status'] == 'healthy' else (503 if health['status'] == 'unhealthy' else 200)
+        
+        return jsonify({
+            'success': True,
+            'data': health
+        }), status_code
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 503
+
+@app.route('/api/metrics/reset', methods=['POST'])
+@limiter.limit("1 per hour")  # Solo admin debería hacer esto
+def metrics_reset():
+    """
+    Reiniciar métricas
+    
+    POR QUÉ: Limpiar estadísticas periódicamente
+    """
+    try:
+        metrics.reset_metrics()
+        return response_success({'message': 'Metrics reset successfully'})
+    except Exception as e:
+        return response_error(f"Error: {str(e)}")
+
 
 # ==================== INICIO DEL SERVIDOR ====================
 
